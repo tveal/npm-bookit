@@ -11,7 +11,7 @@ import {
   createReadStream,
   createWriteStream,
 } from 'fs';
-import { createLogger } from './logger';
+import { createLogger, formatLine } from '../utils';
 
 const log = createLogger('FileConnector');
 
@@ -43,7 +43,7 @@ export class FileConnector {
           files[i].prev = i < 1 ? false : files[i-1].fileName;
           files[i].next = i === files.length-1 ? false : files[i+1].fileName;
         });
-        return Promise.all(files.map((f) => this.buildFile(f)));
+        return Promise.all(files.map((f) => this.buildFile(f, files)));
       });
   }
 
@@ -220,7 +220,7 @@ export class FileConnector {
     };
   }
 
-  async buildFile(fileMeta) {
+  async buildFile(fileMeta, files) {
     const {
       srcFile, next, prev, filePath,
     } = fileMeta;
@@ -228,6 +228,9 @@ export class FileConnector {
       input: createReadStream(`${this.srcPath}/${srcFile}`, { encoding: 'utf8' }),
       crlfDelay: Infinity,
     });
+
+    const srcFileNameMap = groupBy(files, (f) => basename(f.srcFile));
+    // console.log(srcFileNameMap);
 
     let lineNumber = 0;
     let writer;
@@ -256,7 +259,7 @@ export class FileConnector {
           break;
         }
       } else {
-        writer.write(`${line}\r\n`);
+        writer.write(`${formatLine(line, srcFileNameMap)}\r\n`);
       }
     } // for each line
     if (writer) writer.write(`\r\n\r\n---\r\n\r\n${nav}`);

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { FileConnector } from './utils';
+import { FileConnector } from './connector';
 
 const cx = new FileConnector();
 cx.buildBook();

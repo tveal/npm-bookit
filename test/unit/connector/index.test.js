@@ -3,7 +3,7 @@ import yaml from 'js-yaml';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 import { omit, omitBy } from 'lodash';
-import { FileConnector } from '../../../src/utils';
+import { FileConnector } from '../../../src/connector';
 import BookStub from '../../fixtures/BookStub';
 import {
   FILE_INSTALL_NODE,
