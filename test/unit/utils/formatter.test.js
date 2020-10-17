@@ -2,6 +2,9 @@ import { expect } from 'chai';
 import { formatLine } from '../../../src/utils';
 
 describe('Line Formatting', () => {
+  const imgPath = 'testProject/img';
+  const srcPath = 'testProject/src';
+  const bookPath = 'testProject/book';
   const srcFileNameMap = {
     'preface.md': [
       {
@@ -94,17 +97,34 @@ describe('Line Formatting', () => {
       },
     ],
   };
-  it('formatLine', () => {
+  it('formatLine should replace file link', () => {
     const line = [
       'ext img ln no title ![](https://github.com/something?query=param)',
       'relative book path [here](../chapter01/02-ide.md)',
     ].join(' ');
 
-    const fmt = formatLine(line, srcFileNameMap);
+    const fmt = formatLine(line, {
+      srcFileNameMap, srcPath, imgPath, bookPath,
+    });
 
     expect(fmt).to.equal([
       'ext img ln no title ![](https://github.com/something?query=param)',
       'relative book path [here](./972a9e51-d22a-484f-a1fa-8ac24288d282.md)',
+    ].join(' '));
+  });
+  it('formatLine should replace img link', () => {
+    const line = [
+      'ext img ln no title ![](https://github.com/something?query=param)',
+      'relative img path [here](../../img/linux/tux.md)',
+    ].join(' ');
+
+    const fmt = formatLine(line, {
+      srcFileNameMap, srcPath, imgPath, bookPath,
+    });
+
+    expect(fmt).to.equal([
+      'ext img ln no title ![](https://github.com/something?query=param)',
+      'relative img path [here](../img/linux/tux.md)',
     ].join(' '));
   });
 });

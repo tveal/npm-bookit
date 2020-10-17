@@ -10,6 +10,8 @@ import {
   readFileSync,
   createReadStream,
   createWriteStream,
+  rmdirSync,
+  mkdirSync,
 } from 'fs';
 import { createLogger, formatLine } from '../utils';
 
@@ -36,6 +38,11 @@ export class FileConnector {
 
   buildBook() {
     return this.buildBookMeta()
+      .then((metaArray) => { // clean book dir
+        rmdirSync(this.bookPath, { recursive: true });
+        mkdirSync(this.bookPath, { recursive: true });
+        return metaArray;
+      })
       .then((metaArray) => this.addMissingUuid(metaArray))
       .then((metaArray) => this.buildBookToc(metaArray))
       .then((files) => {
@@ -229,9 +236,6 @@ export class FileConnector {
       crlfDelay: Infinity,
     });
 
-    const srcFileNameMap = groupBy(files, (f) => basename(f.srcFile));
-    // console.log(srcFileNameMap);
-
     let lineNumber = 0;
     let writer;
 
@@ -259,7 +263,13 @@ export class FileConnector {
           break;
         }
       } else {
-        writer.write(`${formatLine(line, srcFileNameMap)}\r\n`);
+        const context = {
+          srcFileNameMap: groupBy(files, (f) => basename(f.srcFile)),
+          srcPath: this.srcPath,
+          imgPath: this.imgPath,
+          bookPath: this.bookPath,
+        };
+        writer.write(`${formatLine(line, context)}\r\n`);
       }
     } // for each line
     if (writer) writer.write(`\r\n\r\n---\r\n\r\n${nav}`);

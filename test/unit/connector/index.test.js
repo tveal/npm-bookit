@@ -15,7 +15,7 @@ import {
   FILE_GLOSSARY_PAGE2,
   FILE_APPENDIX,
   FILE_INVALID_UUID,
-} from '../../fixtures/srcFiles';
+} from '../../fixtures/mock-src-files';
 
 let fsStub;
 let cwdStub;
@@ -390,6 +390,27 @@ describe('FileConnector', () => {
       'glossary/glossy1.md',
       'glossary/glossy2.md',
       'appendix/appendix.md',
+    ]);
+    expect(Object.keys(bookStub.filesystem.testProject.book).length).to.equal(10); // index TOC
+  });
+  it('buildBook should cleanup old book files', async () => {
+    const bookStub = initBookStub()
+      .addRootFile('bookit.yml', config)
+      .addBookFile('oops.md', 'Mwha ha ha!')
+      .addBookFile('leftovers.md', 'DejaVu!')
+      .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE);
+
+    const cx = new FileConnector();
+
+    expect(Object.keys(bookStub.filesystem.testProject.book)).to.deep.equal([
+      'oops.md',
+      'leftovers.md',
+    ]);
+    await cx.buildBook();
+
+    expect(Object.keys(bookStub.filesystem.testProject.book)).to.have.members([
+      'index.md',
+      'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
     ]);
   });
   it('formatSectionTitle should be empty chapter title', () => {

@@ -29,6 +29,14 @@ export default class BookStub {
         },
       };
     });
+    this.fsStub.rmdirSync.callsFake((path) => {
+      const fileLodashPath = `${path.split('/').join('.')}`;
+      set(this.filesystem, fileLodashPath, undefined); // "delete" folder
+    });
+    this.fsStub.mkdirSync.callsFake((path) => {
+      const fileLodashPath = `${path.split('/').join('.')}`;
+      set(this.filesystem, fileLodashPath, {}); // "new" folder
+    });
   }
 
   addRootFile(fileName, content) {
