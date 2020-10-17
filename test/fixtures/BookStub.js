@@ -47,6 +47,14 @@ export default class BookStub {
     return this;
   }
 
+  addHomeFile(content) {
+    const objToSave = {
+      'home.md': content,
+    };
+    this.filesystem.testProject.src = merge(this.filesystem.testProject.src, objToSave);
+    return this;
+  }
+
   addSrcFile(folderName, fileName, content) {
     const objToSave = {
       [folderName]: {

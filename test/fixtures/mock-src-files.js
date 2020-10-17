@@ -1,3 +1,8 @@
+export const FILE_WELCOME = `# Aloha Honua!
+
+A book of randomness...
+`.replace(/\n/g, '\r\n');
+
 // FRONT MATTER (introduction, preface, foreword)
 
 export const FILE_INTRO_PAGE1 = `c2b5996a-428d-4c36-b4e8-e02c3953ed44

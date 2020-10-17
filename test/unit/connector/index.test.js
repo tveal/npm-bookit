@@ -6,6 +6,7 @@ import { omit, omitBy } from 'lodash';
 import { FileConnector } from '../../../src/connector';
 import BookStub from '../../fixtures/BookStub';
 import {
+  FILE_WELCOME,
   FILE_INSTALL_NODE,
   FILE_INTRO_PAGE1,
   FILE_INTRO_PAGE2,
@@ -364,6 +365,8 @@ describe('FileConnector', () => {
   it('buildBook should work...', async () => {
     const bookStub = initBookStub()
       .addRootFile('bookit.yml', config)
+      .addHomeFile(FILE_WELCOME)
+      .addSrcFile('introduction', 'page1.md', FILE_INTRO_PAGE1)
       .addSrcFile('introduction', 'page1.md', FILE_INTRO_PAGE1)
       .addSrcFile('introduction', 'page2.md', FILE_INTRO_PAGE2)
       .addSrcFile('preface', 'preface.md', FILE_PREFACE)
@@ -392,6 +395,24 @@ describe('FileConnector', () => {
       'appendix/appendix.md',
     ]);
     expect(Object.keys(bookStub.filesystem.testProject.book).length).to.equal(10); // index TOC
+    // console.log(bookStub.filesystem.testProject.book['index.md']);
+    expect(bookStub.filesystem.testProject.book['index.md']).to.include([
+      '# Aloha Honua!',
+      '',
+      'A book of randomness...',
+      '',
+      '',
+      '[**Preface**](./8b7b8a0f-a14c-41b8-ac48-45ebe461bd92.md)',
+      '---',
+      '[**Foreword**](./8fc14b25-33a0-48d3-b99f-35042aba0caa.md)',
+      '---',
+      '[**Introduction**](./c2b5996a-428d-4c36-b4e8-e02c3953ed44.md)',
+      '---',
+      'Chapter 1: **Tool Setup**',
+      '---',
+      '- [1.1 Install Node](./f377f770-261c-4d5a-b752-0a94f18ff0b8.md)',
+      // next line has a runtime variable uuid
+    ].join('\r\n'));
   });
   it('buildBook should cleanup old book files', async () => {
     const bookStub = initBookStub()

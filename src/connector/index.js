@@ -103,17 +103,26 @@ export class FileConnector {
     const fileArray = [];
     const writer = createWriteStream(`${this.bookPath}/index.md`);
     const writeNonChapters = (section) => {
-      writer.write(`${this.formatSectionTitle(section)}\r\n\r\n`);
+      writer.write(`${this.formatSectionTitle(section)}\r\n---\r\n`);
       fileArray.push(...section.bookFiles);
       return section;
     };
     const writeChapters = (section) => {
-      writer.write(`${this.formatSectionTitle(section)}\r\n`);
+      writer.write(`${this.formatSectionTitle(section)}\r\n---\r\n`);
       section.bookFiles.map((file) => writer.write(`- ${this.formatChapterFileLink(file, section.chapter)}\r\n`));
       fileArray.push(...section.bookFiles);
       writer.write('\r\n');
       return section;
     };
+
+    try {
+      const homeContent = readFileSync(`${this.srcPath}/home.md`);
+      if (homeContent) writer.write(homeContent);
+    } catch (e) { /* istanbul ignore next */
+      console.log('No home.md file found. No Header will be added to the TOC.');
+    }
+    writer.write('\r\n\r\n');
+
     get(metaMap, 'preface', []).map(writeNonChapters);
     get(metaMap, 'foreword', []).map(writeNonChapters);
     get(metaMap, 'introduction', []).map(writeNonChapters);
