@@ -6,7 +6,7 @@
         "targets": {
           "node": "8.10"
         },
-        "useBuiltIns": "usage",
+        "useBuiltIns": "entry",
         "corejs": "2.x",
         "debug": false
       }

@@ -2,7 +2,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
-import { omit } from 'lodash';
+import { omit, omitBy } from 'lodash';
 import { FileConnector } from '../../../src/utils';
 import BookStub from '../../fixtures/BookStub';
 import {
@@ -14,6 +14,7 @@ import {
   FILE_GLOSSARY_PAGE1,
   FILE_GLOSSARY_PAGE2,
   FILE_APPENDIX,
+  FILE_INVALID_UUID,
 } from '../../fixtures/srcFiles';
 
 let fsStub;
@@ -159,15 +160,16 @@ describe('FileConnector', () => {
     const loader = new FileConnector();
     const chapter = loader.getChapters()[0];
 
-    const builtFile = await loader.buildFile(`${chapter.folderName}/${chapter.files[0]}`);
-    expect(omit(builtFile, 'filePath')).to.deep.equal({
-      title: 'Install Node',
-      fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+    const builtFile = await loader.buildFile({
+      srcFile: `${chapter.folderName}/${chapter.files[0]}`,
+      filePath: 'testProject/book/f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+    });
+    expect(builtFile).to.deep.equal({
+      filePath: 'testProject/book/f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
       srcFile: 'chapter01/01-node.md',
     });
-    expect(builtFile.filePath).to.endsWith('book/f377f770-261c-4d5a-b752-0a94f18ff0b8.md');
     expect(bookStub.getBookFile('f377f770-261c-4d5a-b752-0a94f18ff0b8.md'))
-      .to.equal('\r\n# Install Node\r\n\r\nBlob\r\n');
+      .to.equal('**[HOME](./index.md)**\r\n\r\n\r\n# Install Node\r\n\r\nBlob\r\n\r\n\r\n---\r\n\r\n**[HOME](./index.md)**\r\n\r\n');
   });
   it('buildFile should NOT port src file to dst without valid UUIDv4', async () => {
     const bookStub = initBookStub()
@@ -178,16 +180,15 @@ describe('FileConnector', () => {
     const loader = new FileConnector();
     const chapter = loader.getChapters()[0];
 
-    const builtFile = await loader.buildFile(`${chapter.folderName}/${chapter.files[1]}`);
+    const builtFile = await loader.buildFile({
+      srcFile: `${chapter.folderName}/${chapter.files[1]}`,
+    });
     expect(builtFile).to.deep.equal({
-      title: undefined,
-      fileName: undefined,
-      filePath: undefined,
       srcFile: 'chapter01/02-ide.md',
     });
     expect(bookStub.filesystem.testProject.book).to.deep.equal({});
   });
-  it('buildBook should return the built book data', async () => {
+  it('buildBookMeta should return the book metadata', async () => {
     initBookStub()
       .addRootFile('bookit.yml', config)
       .addSrcFile('introduction', 'page1.md', FILE_INTRO_PAGE1)
@@ -195,13 +196,14 @@ describe('FileConnector', () => {
       .addSrcFile('preface', 'preface.md', FILE_PREFACE)
       .addSrcFile('foreword', 'foreword.md', FILE_FOREWORD)
       .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE)
+      .addSrcFile('chapter01', '02-ide.md', FILE_INVALID_UUID)
       .addSrcFile('glossary', 'glossy1.md', FILE_GLOSSARY_PAGE1)
       .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
       .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
 
     const cx = new FileConnector();
 
-    const book = await cx.buildBook();
+    const book = await cx.buildBookMeta();
     // console.log(book);
     // .then((chapters) => console.log(JSON.stringify(chapters, null, 2)))
     expect(book).to.deep.equal([
@@ -263,6 +265,7 @@ describe('FileConnector', () => {
         folderName: 'chapter01',
         files: [
           '01-node.md',
+          '02-ide.md',
         ],
         bookFiles: [
           {
@@ -270,6 +273,12 @@ describe('FileConnector', () => {
             fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
             filePath: 'testProject/book/f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
             srcFile: 'chapter01/01-node.md',
+          },
+          {
+            title: 'Setup Integrated Development Env',
+            fileName: undefined,
+            filePath: undefined,
+            srcFile: 'chapter01/02-ide.md',
           },
         ],
       },
@@ -311,6 +320,88 @@ describe('FileConnector', () => {
         ],
       },
     ]);
+  });
+  it('addMissingUuid should add missing uuid to src file', async () => {
+    const bookStub = initBookStub()
+      .addRootFile('bookit.yml', config)
+      .addSrcFile('introduction', 'page1.md', FILE_INTRO_PAGE1)
+      .addSrcFile('introduction', 'page2.md', FILE_INTRO_PAGE2)
+      .addSrcFile('preface', 'preface.md', FILE_PREFACE)
+      .addSrcFile('foreword', 'foreword.md', FILE_FOREWORD)
+      .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE)
+      .addSrcFile('chapter01', '02-ide.md', FILE_INVALID_UUID)
+      .addSrcFile('glossary', 'glossy1.md', FILE_GLOSSARY_PAGE1)
+      .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
+      .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
+
+    const cx = new FileConnector();
+
+    const metaArray = await cx.buildBookMeta();
+    const fixedUuid = cx.addMissingUuid(metaArray);
+    const diff = fixedUuid
+      .map((m) => JSON.stringify(m))
+      .filter((s) => !metaArray.map((m) => JSON.stringify(m)).includes(s))
+      .map((s) => JSON.parse(s))
+      .map((n) => {
+        const old = metaArray.filter((o) => o.folderName === n.folderName)[0];
+        const dif = omitBy(n, (v, k) => old[k] === v);
+        return {
+          old,
+          new: n,
+          dif,
+        };
+      });
+    // .then((chapters) => console.log(JSON.stringify(chapters, null, 2)))
+    // console.log(bookStub.filesystem.testProject.src);
+    expect(diff.length).to.equal(1);
+    expect(omit(diff[0].new, 'bookFiles')).to.deep.equal(omit(diff[0].old, 'bookFiles'));
+    expect(diff[0].new.bookFiles[1].fileName).to.not.be.undefined;
+    expect(diff[0].old.bookFiles[1].fileName).to.be.undefined;
+    expect(bookStub.filesystem.testProject.src.chapter01['02-ide.md'])
+      .containIgnoreSpaces(diff[0].new.bookFiles[1].fileName.split('.')[0]);
+    // expect(metaArray).to.deep.equal(fixedUuid);
+  });
+  it('buildBook should work...', async () => {
+    const bookStub = initBookStub()
+      .addRootFile('bookit.yml', config)
+      .addSrcFile('introduction', 'page1.md', FILE_INTRO_PAGE1)
+      .addSrcFile('introduction', 'page2.md', FILE_INTRO_PAGE2)
+      .addSrcFile('preface', 'preface.md', FILE_PREFACE)
+      .addSrcFile('foreword', 'foreword.md', FILE_FOREWORD)
+      .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE)
+      .addSrcFile('chapter01', '02-ide.md', FILE_INVALID_UUID)
+      .addSrcFile('glossary', 'glossy1.md', FILE_GLOSSARY_PAGE1)
+      .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
+      .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
+
+    const cx = new FileConnector();
+
+    const book = await cx.buildBook();
+
+    // console.log(bookStub.filesystem.testProject.book);
+    expect(book.length).to.equal(9);
+    expect(book.map((f) => f.srcFile)).to.deep.equal([
+      'preface/preface.md',
+      'foreword/foreword.md',
+      'introduction/page1.md',
+      'introduction/page2.md',
+      'chapter01/01-node.md',
+      'chapter01/02-ide.md',
+      'glossary/glossy1.md',
+      'glossary/glossy2.md',
+      'appendix/appendix.md',
+    ]);
+  });
+  it('formatSectionTitle should be empty chapter title', () => {
+    const title = new FileConnector().formatSectionTitle({ chapter: 2, bookFiles: ['01-some-page.md'] });
+    expect(title).to.equal('Chapter 2:');
+  });
+  it('formatChapterFileLink should derive title from filename', () => {
+    const title = new FileConnector().formatChapterFileLink({
+      srcFile: 'chapter03/01-some-page.md',
+      fileName: 'ebdde1f6-3dfb-4fb0-8c9e-c2192e73b050.md',
+    }, 3);
+    expect(title).to.equal('[3.1 some page](./ebdde1f6-3dfb-4fb0-8c9e-c2192e73b050.md)');
   });
   it('sanity check: stub cwd()', () => {
     sinon.restore(); // already stubbed in beforeEach; reset

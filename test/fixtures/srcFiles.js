@@ -27,7 +27,7 @@ export const FILE_INSTALL_NODE = `f377f770-261c-4d5a-b752-0a94f18ff0b8
 
 Blob
 `.replace(/\n/g, '\r\n');
-export const FILE_IDE = `bf29d324-8cf9-4510-8ced-69848d253989
+export const FILE_INVALID_UUID = `bf29d324-8cf9-4510-8ced-69848d253989-invalid
 
 # Setup Integrated Development Env
 `.replace(/\n/g, '\r\n');

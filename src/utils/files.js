@@ -1,5 +1,8 @@
 import yaml from 'js-yaml';
-import { get, startCase } from 'lodash';
+import { basename } from 'path';
+import {
+  get, startCase, groupBy, forEach,
+} from 'lodash';
 import readline from 'readline';
 import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import {
@@ -26,30 +29,113 @@ export class FileConnector {
       console.log(e); /* istanbul ignore next */
       throw Error(`Failed to load ${this.configFile || 'config'} file.`);
     }
-    this.srcPath = `${process.cwd()}/${this.config.bookSrc || 'src'}`;
-    this.bookPath = `${process.cwd()}/${this.config.bookDst || 'book'}`;
-    this.imgPath = `${process.cwd()}/${this.config.imgDir || 'img'}`;
+    this.srcPath = `${process.cwd()}/${get(this, 'config.bookSrc', 'src')}`;
+    this.bookPath = `${process.cwd()}/${get(this, 'config.bookDst', 'book')}`;
+    this.imgPath = `${process.cwd()}/${get(this, 'config.imgDir', 'img')}`;
+  }
+
+  buildBook() {
+    return this.buildBookMeta()
+      .then((metaArray) => this.addMissingUuid(metaArray))
+      .then((metaArray) => this.buildBookToc(metaArray))
+      .then((files) => {
+        forEach(files, (v, i) => {
+          files[i].prev = i < 1 ? false : files[i-1].fileName;
+          files[i].next = i === files.length-1 ? false : files[i+1].fileName;
+        });
+        return Promise.all(files.map((f) => this.buildFile(f)));
+      });
+  }
+
+  formatSectionTitle(section) {
+    const { chapter, title, bookFiles } = section;
+    const chapTitle = title ? ` **${title}**` : '';
+    return chapter
+      ? `Chapter ${chapter}:${chapTitle}`
+      : `[**${title}**](./${bookFiles[0].fileName})`;
+  }
+
+  formatChapterFileLink(file, chapter) {
+    const { srcFile, fileName, title } = file;
+    const num = `${chapter}.${Number(basename(srcFile).replace(/\D+/g, ''))}`;
+
+    return title
+      ? `[${num} ${title}](./${fileName})`
+      : `[${num} ${basename(srcFile).split('.')[0].replace(/[-_\d]+/g, ' ').trim()}](./${fileName})`;
+  }
+
+  addMissingUuid(metaArray) {
+    return metaArray.map((section) => {
+      const bookFiles = section.bookFiles
+        .map((file) => {
+          if (file.fileName) return file;
+          const uuid = uuidv4();
+          const fileName = `${uuid}.md`;
+          const filePath = `${this.bookPath}/${fileName}`;
+          const srcFilePath = `${this.srcPath}/${file.srcFile}`;
+          const content = readFileSync(srcFilePath);
+          const writer = createWriteStream(srcFilePath);
+          writer.write(`${uuid}\r\n`);
+          writer.write(content);
+          return {
+            ...file,
+            fileName,
+            filePath,
+          };
+        });
+      return {
+        ...section,
+        bookFiles,
+      };
+    });
+  }
+
+  buildBookToc(metaArray) {
+    const metaMap = groupBy(metaArray, (m) => m.folderName.replace(/\d+/g, ''));
+
+    const fileArray = [];
+    const writer = createWriteStream(`${this.bookPath}/index.md`);
+    const writeNonChapters = (section) => {
+      writer.write(`${this.formatSectionTitle(section)}\r\n\r\n`);
+      fileArray.push(...section.bookFiles);
+      return section;
+    };
+    const writeChapters = (section) => {
+      writer.write(`${this.formatSectionTitle(section)}\r\n`);
+      section.bookFiles.map((file) => writer.write(`- ${this.formatChapterFileLink(file, section.chapter)}\r\n`));
+      fileArray.push(...section.bookFiles);
+      writer.write('\r\n');
+      return section;
+    };
+    get(metaMap, 'preface', []).map(writeNonChapters);
+    get(metaMap, 'foreword', []).map(writeNonChapters);
+    get(metaMap, 'introduction', []).map(writeNonChapters);
+    get(metaMap, 'chapter', []).map(writeChapters);
+    get(metaMap, 'glossary', []).map(writeNonChapters);
+    get(metaMap, 'appendix', []).map(writeNonChapters);
+
+    return fileArray;
   }
 
   // https://doc.rust-lang.org/stable/book/
-  buildBook() {
+  buildBookMeta() {
     return Promise.all([
-      ...this.buildMatter(this.getFrontMatter()),
-      ...this.buildMatter(this.getChapters()),
-      ...this.buildMatter(this.getBackMatter()),
+      ...this.buildMatterMeta(this.getFrontMatter()),
+      ...this.buildMatterMeta(this.getChapters()),
+      ...this.buildMatterMeta(this.getBackMatter()),
     ]);
   }
 
-  buildMatter(matter) {
+  buildMatterMeta(matter) {
     return matter.map(
       (folder) => {
         const filesInProgress = folder.files
-          .map((file) => this.buildFile(`${folder.folderName}/${file}`));
+          .map((file) => this.buildFileMeta(`${folder.folderName}/${file}`));
 
         return Promise.all(filesInProgress)
           .then((bookFiles) => ({
             ...folder,
-            bookFiles: bookFiles.filter((f) => f.fileName),
+            bookFiles,
           }));
       },
     );
@@ -91,14 +177,13 @@ export class FileConnector {
   }
 
   // https://nodejs.org/api/readline.html#readline_example_read_file_stream_line_by_line
-  async buildFile(srcFile) {
+  async buildFileMeta(srcFile) {
     const rl = readline.createInterface({
       input: createReadStream(`${this.srcPath}/${srcFile}`, { encoding: 'utf8' }),
       crlfDelay: Infinity,
     });
 
     let lineNumber = 0;
-    let writer;
 
     // file props
     let title;
@@ -108,26 +193,21 @@ export class FileConnector {
     // eslint-disable-next-line
     for await (const line of rl) {
       lineNumber += 1;
-      // console.log('+++++line:', line);
+      if (lineNumber > 5 || title) break;
 
       if (lineNumber === 1) {
         if (isUuid(line.trim())) {
           fileName = `${line.trim()}.md`;
           filePath = `${this.bookPath}/${fileName}`;
-          writer = createWriteStream(filePath);
         } else {
           log.error(
             `ERROR no uuid4 for ${srcFile}.
               Add one to the first line of the file.
               Suggested uuid4: ${uuidv4()}`,
           );
-          break;
         }
-      } else {
-        if (!title && line.startsWith('# ')) {
-          title = line.substring(2);
-        }
-        writer.write(`${line}\r\n`);
+      } else if (!title && line.startsWith('# ')) {
+        title = line.substring(2);
       }
     } // for each line
     rl.close();
@@ -138,6 +218,51 @@ export class FileConnector {
       filePath,
       srcFile,
     };
+  }
+
+  async buildFile(fileMeta) {
+    const {
+      srcFile, next, prev, filePath,
+    } = fileMeta;
+    const rl = readline.createInterface({
+      input: createReadStream(`${this.srcPath}/${srcFile}`, { encoding: 'utf8' }),
+      crlfDelay: Infinity,
+    });
+
+    let lineNumber = 0;
+    let writer;
+
+    const navArray = [];
+    if (prev) navArray.push(`**[⏪ PREV](./${prev})**`);
+    navArray.push('**[HOME](./index.md)**');
+    if (next) navArray.push(`**[NEXT ⏩](./${next})**`);
+    const nav = `${navArray.join(' | ')}\r\n\r\n`;
+
+    // eslint-disable-next-line
+    for await (const line of rl) {
+      lineNumber += 1;
+      // console.log('+++++line:', line);
+
+      if (lineNumber === 1) {
+        if (isUuid(line.trim())) {
+          writer = createWriteStream(filePath);
+          writer.write(nav);
+        } else {
+          log.error(
+            `ERROR no uuid4 for ${srcFile}.
+              Add one to the first line of the file.
+              Suggested uuid4: ${uuidv4()}`,
+          );
+          break;
+        }
+      } else {
+        writer.write(`${line}\r\n`);
+      }
+    } // for each line
+    if (writer) writer.write(`\r\n\r\n---\r\n\r\n${nav}`);
+    rl.close();
+
+    return fileMeta;
   }
 }
 

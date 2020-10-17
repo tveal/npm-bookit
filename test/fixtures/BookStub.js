@@ -1,4 +1,4 @@
-import { get, merge } from 'lodash';
+import { get, merge, set } from 'lodash';
 import { basename, dirname } from 'path';
 import { Readable } from 'stream';
 
@@ -20,10 +20,12 @@ export default class BookStub {
     this.fsStub.createReadStream.callsFake((path) => Readable.from(this.getFile(path).split('\n')));
     this.fsStub.createWriteStream.callsFake((filePath) => {
       const fileName = basename(filePath);
-      this.addBookFile(fileName, ''); // new file
+      const fileLodashPath = `${dirname(filePath).split('/').join('.')}['${fileName}']`;
+      set(this.filesystem, fileLodashPath, ''); // new file
       return {
         write: (line) => {
-          this.filesystem.testProject.book[fileName] += line;
+          const current = get(this.filesystem, fileLodashPath);
+          set(this.filesystem, fileLodashPath, current + line);
         },
       };
     });
