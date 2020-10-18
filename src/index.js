@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { FileConnector } from './connector';
+import yargs from 'yargs';
+import build from './commands/build';
 
-const cx = new FileConnector();
-cx.buildBook();
+yargs.command(build)
+  .demandCommand()
+  .help()
+  .argv;

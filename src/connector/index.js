@@ -13,12 +13,13 @@ import {
   rmdirSync,
   mkdirSync,
 } from 'fs';
-import { createLogger, formatLine } from '../utils';
-
-const log = createLogger('FileConnector');
+import { log, formatLine } from '../utils';
 
 export class FileConnector {
   constructor() {
+    log.info('HI!');
+    log.error('Test err');
+    log.debug('Test debug');
     const configFiles = readdirSync(process.cwd()).filter((i) => allowedConfigFiles.includes(i));
     this.configFile = `${process.cwd()}/${configFiles[0]}`;
     if (configFiles.length !== 1) {
@@ -28,17 +29,24 @@ export class FileConnector {
     try {
       this.config = yaml.safeLoad(readFileSync(this.configFile, 'utf8'));
     } catch (e) { /* istanbul ignore next */
-      console.log(e); /* istanbul ignore next */
       throw Error(`Failed to load ${this.configFile || 'config'} file.`);
     }
     this.srcPath = `${process.cwd()}/${get(this, 'config.bookSrc', 'src')}`;
     this.bookPath = `${process.cwd()}/${get(this, 'config.bookDst', 'book')}`;
     this.imgPath = `${process.cwd()}/${get(this, 'config.imgDir', 'img')}`;
+
+    log.debug(`Configuration:
+      bookSrc: ${this.srcPath}
+      bookDst: ${this.bookPath}
+      imgDir: ${this.imgPath}
+    `);
   }
 
   buildBook() {
+    log.debug('Building book...');
     return this.buildBookMeta()
       .then((metaArray) => { // clean book dir
+        log.debug('Cleaning book folder');
         rmdirSync(this.bookPath, { recursive: true });
         mkdirSync(this.bookPath, { recursive: true });
         return metaArray;
@@ -46,6 +54,7 @@ export class FileConnector {
       .then((metaArray) => this.addMissingUuid(metaArray))
       .then((metaArray) => this.buildBookToc(metaArray))
       .then((files) => {
+        log.debug('Building Files...');
         forEach(files, (v, i) => {
           files[i].prev = i < 1 ? false : files[i-1].fileName;
           files[i].next = i === files.length-1 ? false : files[i+1].fileName;
@@ -72,6 +81,7 @@ export class FileConnector {
   }
 
   addMissingUuid(metaArray) {
+    log.debug('Adding any missing UUIDs');
     return metaArray.map((section) => {
       const bookFiles = section.bookFiles
         .map((file) => {
@@ -84,6 +94,7 @@ export class FileConnector {
           const writer = createWriteStream(srcFilePath);
           writer.write(`${uuid}\r\n`);
           writer.write(content);
+          log.debug(`added uuid ${uuid} to ${file.srcFile}`);
           return {
             ...file,
             fileName,
@@ -98,18 +109,28 @@ export class FileConnector {
   }
 
   buildBookToc(metaArray) {
+    log.debug('Building TOC...');
     const metaMap = groupBy(metaArray, (m) => m.folderName.replace(/\d+/g, ''));
 
     const fileArray = [];
     const writer = createWriteStream(`${this.bookPath}/index.md`);
     const writeNonChapters = (section) => {
-      writer.write(`${this.formatSectionTitle(section)}\r\n---\r\n`);
+      const sectionTitle = this.formatSectionTitle(section);
+      writer.write(`${sectionTitle}\r\n---\r\n`);
+      log.debug(sectionTitle);
       fileArray.push(...section.bookFiles);
       return section;
     };
     const writeChapters = (section) => {
-      writer.write(`${this.formatSectionTitle(section)}\r\n---\r\n`);
-      section.bookFiles.map((file) => writer.write(`- ${this.formatChapterFileLink(file, section.chapter)}\r\n`));
+      const sectionTitle = this.formatSectionTitle(section);
+      writer.write(`${sectionTitle}\r\n---\r\n`);
+      log.debug(sectionTitle);
+      section.bookFiles.map((file) => {
+        const chLink = `- ${this.formatChapterFileLink(file, section.chapter)}`;
+        writer.write(`${chLink}\r\n`);
+        log.debug(chLink);
+        return file;
+      });
       fileArray.push(...section.bookFiles);
       writer.write('\r\n');
       return section;
@@ -117,9 +138,12 @@ export class FileConnector {
 
     try {
       const homeContent = readFileSync(`${this.srcPath}/home.md`);
-      if (homeContent) writer.write(homeContent);
+      if (homeContent) {
+        writer.write(homeContent);
+        log.debug('Added home.md content to TOC');
+      }
     } catch (e) { /* istanbul ignore next */
-      console.log('No home.md file found. No Header will be added to the TOC.');
+      log.debug('No home.md file found. No Header will be added to the TOC.');
     }
     writer.write('\r\n\r\n');
 
@@ -216,8 +240,8 @@ export class FileConnector {
           fileName = `${line.trim()}.md`;
           filePath = `${this.bookPath}/${fileName}`;
         } else {
-          log.error(
-            `ERROR no uuid4 for ${srcFile}.
+          log.debug(
+            `Warning - no uuid4 for ${srcFile}.
               Add one to the first line of the file.
               Suggested uuid4: ${uuidv4()}`,
           );
@@ -284,6 +308,7 @@ export class FileConnector {
     if (writer) writer.write(`\r\n\r\n---\r\n\r\n${nav}`);
     rl.close();
 
+    log.debug(`built ${srcFile}`);
     return fileMeta;
   }
 }
