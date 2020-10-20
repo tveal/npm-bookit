@@ -1,10 +1,14 @@
-import { log, setLogLevel } from '../utils';
-import { FileConnector } from '../connector';
+import { log, setLogLevel, getInitConfigFromUser } from '../utils';
 
 export default {
-  command: 'build',
-  describe: 'build bookmark-able living book (constant urls)',
+  command: 'init',
+  describe: 'setup new book project',
   builder: {
+    custom: {
+      alias: 'c',
+      type: 'boolean',
+      describe: 'specify different book base-directories',
+    },
     debug: {
       alias: 'd',
       type: 'boolean',
@@ -25,8 +29,10 @@ export default {
     setLogLevel(argv);
 
     try {
-      await new FileConnector().buildBook();
-      log.info('Book built successfully!');
+      const things = await getInitConfigFromUser(argv);
+
+      log.info(things);
+      log.info('Initialized book successfully!');
     } catch (e) {
       log.error(e);
       process.exit(-1);

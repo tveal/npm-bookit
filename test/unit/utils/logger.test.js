@@ -1,5 +1,7 @@
 import { expect } from 'chai';
-import { createLogger } from '../../../src/utils';
+import * as sinon from 'sinon';
+import DEBUG from 'debug';
+import { createLogger, setLogLevel } from '../../../src/utils';
 
 describe('createLogger', () => {
   it('should create logger with app prefix', () => {
@@ -24,5 +26,33 @@ describe('createLogger', () => {
     expect(log.info.namespace).to.equal('info');
     expect(log.error.namespace).to.equal('error');
     expect(log.debug.namespace).to.equal('debug');
+  });
+
+  describe('setLogLevel', () => {
+    let debugStub;
+    beforeEach(() => {
+      debugStub = sinon.stub(DEBUG, 'enable');
+    });
+    afterEach(sinon.restore);
+    it('should set default level', () => {
+      setLogLevel({});
+
+      expect(debugStub).to.have.been.calledOnceWith('error*');
+    });
+    it('should set debug level', () => {
+      setLogLevel({ debug: true });
+
+      expect(debugStub).to.have.been.calledOnceWith('*');
+    });
+    it('should set info level', () => {
+      setLogLevel({ info: true });
+
+      expect(debugStub).to.have.been.calledOnceWith('info*,error*');
+    });
+    it('should set quiet level', () => {
+      setLogLevel({ quiet: true });
+
+      expect(debugStub).to.have.been.calledOnceWith('');
+    });
   });
 });
