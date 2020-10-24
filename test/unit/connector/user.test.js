@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
 import inquirer from 'inquirer';
-import { getInitConfigFromUser, directoryQuestions } from '../../../src/utils';
+import { getInitConfigFromUser, directoryQuestions } from '../../../src/connector/user';
 
 describe('getInitConfigFromUser', () => {
   let promptStub;

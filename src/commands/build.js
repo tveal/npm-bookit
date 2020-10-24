@@ -1,5 +1,5 @@
 import { log, setLogLevel } from '../utils';
-import { FileConnector } from '../connector';
+import { Bookit } from '../bookit';
 
 export default {
   command: 'build',
@@ -25,7 +25,7 @@ export default {
     setLogLevel(argv);
 
     try {
-      await new FileConnector().buildBook();
+      await new Bookit().buildBook();
       log.info('Book built successfully!');
     } catch (e) {
       log.error(e);

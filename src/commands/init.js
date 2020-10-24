@@ -1,4 +1,5 @@
-import { log, setLogLevel, getInitConfigFromUser } from '../utils';
+import { log, setLogLevel } from '../utils';
+import { getInitConfigFromUser } from '../connector/user';
 
 export default {
   command: 'init',

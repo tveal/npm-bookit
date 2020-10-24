@@ -3,8 +3,8 @@ import yaml from 'js-yaml';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 import { omit, omitBy } from 'lodash';
-import { FileConnector } from '../../../src/connector';
-import BookStub from '../../fixtures/BookStub';
+import { Bookit } from '../../src/bookit';
+import BookStub from '../fixtures/BookStub';
 import {
   FILE_WELCOME,
   FILE_INSTALL_NODE,
@@ -16,7 +16,7 @@ import {
   FILE_GLOSSARY_PAGE2,
   FILE_APPENDIX,
   FILE_INVALID_UUID,
-} from '../../fixtures/mock-src-files';
+} from '../fixtures/mock-src-files';
 
 let fsStub;
 let cwdStub;
@@ -25,7 +25,7 @@ const initBookStub = () => new BookStub(
   cwdStub,
 );
 
-describe('FileConnector', () => {
+describe('Bookit', () => {
   let config;
   beforeEach(() => {
     fsStub = sinon.stub(fs);
@@ -44,24 +44,24 @@ describe('FileConnector', () => {
     initBookStub()
       .addRootFile('bookit.yml', yaml.safeDump({}));
 
-    const fileConnector = new FileConnector();
+    const bookit = new Bookit();
 
-    expect(fileConnector.srcPath).to.equal('testProject/src');
-    expect(fileConnector.bookPath).to.equal('testProject/book');
-    expect(fileConnector.imgPath).to.equal('testProject/img');
+    expect(bookit.srcPath).to.equal('testProject/src');
+    expect(bookit.bookPath).to.equal('testProject/book');
+    expect(bookit.imgPath).to.equal('testProject/img');
   });
   it('constructor should throw error for no config file', () => {
     initBookStub();
 
     let error;
-    let fileConnector;
+    let bookit;
     try {
-      fileConnector = new FileConnector();
+      bookit = new Bookit();
     } catch (e) {
       error = e;
     }
 
-    expect(fileConnector).to.be.undefined;
+    expect(bookit).to.be.undefined;
     expect(error.message)
       .to.equal('Cannot load config. Must have exactly 1 file in the project root; Supported names: [ bookit.yml, bookit.yaml ]');
   });
@@ -75,7 +75,7 @@ describe('FileConnector', () => {
       .addSrcFile('other', 'unknown.md', 'something')
       .addSrcFile('glossary', 'glossy.md', 'something');
 
-    const frontMatter = new FileConnector().getFrontMatter();
+    const frontMatter = new Bookit().getFrontMatter();
 
     expect(frontMatter).to.deep.equal([
       {
@@ -105,7 +105,7 @@ describe('FileConnector', () => {
       .addSrcFile('chapter02', '01-test-patterns.md', 'something')
       .addSrcFile('chapter02', '02-test-frameworks.md', 'something');
 
-    const chapters = new FileConnector().getChapters();
+    const chapters = new Bookit().getChapters();
 
     expect(chapters).to.deep.equal([
       {
@@ -138,7 +138,7 @@ describe('FileConnector', () => {
       .addSrcFile('other', 'unknown.md', 'something')
       .addSrcFile('glossary', 'glossy.md', 'something');
 
-    const backMatter = new FileConnector().getBackMatter();
+    const backMatter = new Bookit().getBackMatter();
 
     expect(backMatter).to.deep.equal([
       {
@@ -158,7 +158,7 @@ describe('FileConnector', () => {
       .addRootFile('bookit.yml', config)
       .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE);
 
-    const loader = new FileConnector();
+    const loader = new Bookit();
     const chapter = loader.getChapters()[0];
 
     const builtFile = await loader.buildFile({
@@ -178,7 +178,7 @@ describe('FileConnector', () => {
       .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE)
       .addSrcFile('chapter01', '02-ide.md', '# Integrated Dev Env');
 
-    const loader = new FileConnector();
+    const loader = new Bookit();
     const chapter = loader.getChapters()[0];
 
     const builtFile = await loader.buildFile({
@@ -202,7 +202,7 @@ describe('FileConnector', () => {
       .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
       .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
 
-    const cx = new FileConnector();
+    const cx = new Bookit();
 
     const book = await cx.buildBookMeta();
     // console.log(book);
@@ -335,7 +335,7 @@ describe('FileConnector', () => {
       .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
       .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
 
-    const cx = new FileConnector();
+    const cx = new Bookit();
 
     const metaArray = await cx.buildBookMeta();
     const fixedUuid = cx.addMissingUuid(metaArray);
@@ -377,7 +377,7 @@ describe('FileConnector', () => {
       .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
       .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
 
-    const cx = new FileConnector();
+    const cx = new Bookit();
 
     const book = await cx.buildBook();
 
@@ -421,7 +421,7 @@ describe('FileConnector', () => {
       .addBookFile('leftovers.md', 'DejaVu!')
       .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE);
 
-    const cx = new FileConnector();
+    const cx = new Bookit();
 
     expect(Object.keys(bookStub.filesystem.testProject.book)).to.deep.equal([
       'oops.md',
@@ -435,11 +435,11 @@ describe('FileConnector', () => {
     ]);
   });
   it('formatSectionTitle should be empty chapter title', () => {
-    const title = new FileConnector().formatSectionTitle({ chapter: 2, bookFiles: ['01-some-page.md'] });
+    const title = new Bookit().formatSectionTitle({ chapter: 2, bookFiles: ['01-some-page.md'] });
     expect(title).to.equal('Chapter 2:');
   });
   it('formatChapterFileLink should derive title from filename', () => {
-    const title = new FileConnector().formatChapterFileLink({
+    const title = new Bookit().formatChapterFileLink({
       srcFile: 'chapter03/01-some-page.md',
       fileName: 'ebdde1f6-3dfb-4fb0-8c9e-c2192e73b050.md',
     }, 3);

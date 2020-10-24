@@ -6,28 +6,28 @@ import {
 import readline from 'readline';
 import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import {
-  readdirSync,
-  readFileSync,
-  createReadStream,
-  createWriteStream,
-  rmdirSync,
-  mkdirSync,
-} from 'fs';
-import { log, formatLine } from '../utils';
+  listDirectory,
+  getFileContent,
+  readFileStream,
+  writeFileStream,
+  deleteDirectory,
+  createDirectory,
+} from './connector/filesystem';
+import { log, formatLine } from './utils';
 
-export class FileConnector {
+export class Bookit {
   constructor() {
     log.info('HI!');
     log.error('Test err');
     log.debug('Test debug');
-    const configFiles = readdirSync(process.cwd()).filter((i) => allowedConfigFiles.includes(i));
+    const configFiles = listDirectory(process.cwd()).filter((i) => allowedConfigFiles.includes(i));
     this.configFile = `${process.cwd()}/${configFiles[0]}`;
     if (configFiles.length !== 1) {
       throw Error('Cannot load config. Must have exactly 1 file in the project root;'
         + ` Supported names: [ ${allowedConfigFiles.join(', ')} ]`);
     }
     try {
-      this.config = yaml.safeLoad(readFileSync(this.configFile, 'utf8'));
+      this.config = yaml.safeLoad(getFileContent(this.configFile));
     } catch (e) { /* istanbul ignore next */
       throw Error(`Failed to load ${this.configFile || 'config'} file.`);
     }
@@ -47,8 +47,8 @@ export class FileConnector {
     return this.buildBookMeta()
       .then((metaArray) => { // clean book dir
         log.debug('Cleaning book folder');
-        rmdirSync(this.bookPath, { recursive: true });
-        mkdirSync(this.bookPath, { recursive: true });
+        deleteDirectory(this.bookPath);
+        createDirectory(this.bookPath);
         return metaArray;
       })
       .then((metaArray) => this.addMissingUuid(metaArray))
@@ -90,8 +90,8 @@ export class FileConnector {
           const fileName = `${uuid}.md`;
           const filePath = `${this.bookPath}/${fileName}`;
           const srcFilePath = `${this.srcPath}/${file.srcFile}`;
-          const content = readFileSync(srcFilePath);
-          const writer = createWriteStream(srcFilePath);
+          const content = getFileContent(srcFilePath);
+          const writer = writeFileStream(srcFilePath);
           writer.write(`${uuid}\r\n`);
           writer.write(content);
           log.debug(`added uuid ${uuid} to ${file.srcFile}`);
@@ -113,7 +113,7 @@ export class FileConnector {
     const metaMap = groupBy(metaArray, (m) => m.folderName.replace(/\d+/g, ''));
 
     const fileArray = [];
-    const writer = createWriteStream(`${this.bookPath}/index.md`);
+    const writer = writeFileStream(`${this.bookPath}/index.md`);
     const writeNonChapters = (section) => {
       const sectionTitle = this.formatSectionTitle(section);
       writer.write(`${sectionTitle}\r\n---\r\n`);
@@ -137,7 +137,7 @@ export class FileConnector {
     };
 
     try {
-      const homeContent = readFileSync(`${this.srcPath}/home.md`);
+      const homeContent = getFileContent(`${this.srcPath}/home.md`);
       if (homeContent) {
         writer.write(homeContent);
         log.debug('Added home.md content to TOC');
@@ -182,17 +182,17 @@ export class FileConnector {
   }
 
   getFrontMatter() {
-    return readdirSync(this.srcPath)
+    return listDirectory(this.srcPath)
       .filter((item) => isValidFrontMatter(item))
       .map((folderName) => ({
         title: startCase(folderName),
         folderName,
-        files: readdirSync(`${this.srcPath}/${folderName}`).filter((i) => isMarkdownFile(i)),
+        files: listDirectory(`${this.srcPath}/${folderName}`).filter((i) => isMarkdownFile(i)),
       }));
   }
 
   getChapters() {
-    const things = readdirSync(this.srcPath);
+    const things = listDirectory(this.srcPath);
     return things
       .filter((item) => isValidChapter(item))
       .map((folderName) => {
@@ -201,25 +201,25 @@ export class FileConnector {
           chapter,
           title: get(this, `config.chapterTitles[${chapter}]`, false),
           folderName,
-          files: readdirSync(`${this.srcPath}/${folderName}`).filter((i) => isMarkdownFile(i)),
+          files: listDirectory(`${this.srcPath}/${folderName}`).filter((i) => isMarkdownFile(i)),
         };
       });
   }
 
   getBackMatter() {
-    return readdirSync(this.srcPath)
+    return listDirectory(this.srcPath)
       .filter((item) => isValidBackMatter(item))
       .map((folderName) => ({
         title: startCase(folderName),
         folderName,
-        files: readdirSync(`${this.srcPath}/${folderName}`).filter((i) => isMarkdownFile(i)),
+        files: listDirectory(`${this.srcPath}/${folderName}`).filter((i) => isMarkdownFile(i)),
       }));
   }
 
   // https://nodejs.org/api/readline.html#readline_example_read_file_stream_line_by_line
   async buildFileMeta(srcFile) {
     const rl = readline.createInterface({
-      input: createReadStream(`${this.srcPath}/${srcFile}`, { encoding: 'utf8' }),
+      input: readFileStream(`${this.srcPath}/${srcFile}`),
       crlfDelay: Infinity,
     });
 
@@ -265,7 +265,7 @@ export class FileConnector {
       srcFile, next, prev, filePath,
     } = fileMeta;
     const rl = readline.createInterface({
-      input: createReadStream(`${this.srcPath}/${srcFile}`, { encoding: 'utf8' }),
+      input: readFileStream(`${this.srcPath}/${srcFile}`),
       crlfDelay: Infinity,
     });
 
@@ -285,7 +285,7 @@ export class FileConnector {
 
       if (lineNumber === 1) {
         if (isUuid(line.trim())) {
-          writer = createWriteStream(filePath);
+          writer = writeFileStream(filePath);
           writer.write(nav);
         } else {
           log.error(
