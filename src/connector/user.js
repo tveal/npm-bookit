@@ -24,6 +24,21 @@ export const getInitConfigFromUser = (argv) => {
   return prompt(questions);
 };
 
+export const getConfigOverrideConfirmationFromUser = (argv) => {
+  const { custom } = argv;
+
+  const questions = [{
+    name: 'overrideConfig',
+    type: 'confirm',
+    message: 'WARNING: bookit yaml config already exists; override?',
+    default: false,
+  }];
+
+  return custom
+    ? prompt(questions)
+    : { overrideConfig: false };
+};
+
 export const directoryQuestions = [
   {
     name: 'bookSrc',

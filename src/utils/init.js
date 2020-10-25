@@ -1,9 +1,12 @@
-import { lowerCase } from 'lodash';
+import {
+  lowerCase, merge,
+} from 'lodash';
 import yaml from 'js-yaml';
 import { log } from './logger';
-import { getInitConfigFromUser } from '../connector/user';
+import { getInitConfigFromUser, getConfigOverrideConfirmationFromUser } from '../connector/user';
 import {
   listDirectory,
+  getFileContent,
   createDirectory,
   getFileStreamWriter,
   isExistingPath,
@@ -16,6 +19,23 @@ export const allowedConfigFiles = [
 
 export const listConfigFiles = () => listDirectory(process.cwd()).filter((i) => allowedConfigFiles.includes(i));
 
+export const loadOrCreateConfig = async (argv, newConfig) => {
+  const configFiles = listConfigFiles();
+  let config = merge({}, newConfig);
+  let configPath = `${process.cwd()}/bookit.yml`;
+  if (configFiles.length > 0) {
+    const { overrideConfig } = await getConfigOverrideConfirmationFromUser(argv);
+    configPath = `${process.cwd()}/${configFiles[0]}`;
+    config = overrideConfig
+      ? merge(yaml.safeLoad(getFileContent(configPath)), newConfig)
+      : merge(newConfig, yaml.safeLoad(getFileContent(configPath)));
+  }
+  return {
+    config,
+    configPath,
+  };
+};
+
 export const initialize = async (argv) => {
   log.debug('Initializing Bookit...');
   const {
@@ -25,30 +45,22 @@ export const initialize = async (argv) => {
     sections,
   } = await getInitConfigFromUser(argv);
 
+  const { config, configPath } = await loadOrCreateConfig(argv, {
+    bookSrc, bookDst, imgDir, chapterTitles: { 1: 'Hello World!' },
+  });
   const cwd = process.cwd();
-  const srcPath = `${cwd}/${bookSrc}`;
-  const bookPath = `${cwd}/${bookDst}`;
-  const imgPath = `${cwd}/${imgDir}`;
-  const configPath = `${cwd}/bookit.yml`;
+  const srcPath = `${cwd}/${config.bookSrc}`;
+  const bookPath = `${cwd}/${config.bookDst}`;
+  const imgPath = `${cwd}/${config.imgDir}`;
 
   log.debug('Setting up bookit config:', {
     cwd, srcPath, bookPath, imgPath, configPath,
   });
 
-  const configFiles = listConfigFiles();
-  if (configFiles.length < 1) {
-    const writer = getFileStreamWriter(configPath);
-    writer.write(yaml.safeDump({
-      bookSrc,
-      bookDst,
-      chapterTitles: {
-        1: 'Hello World!',
-      },
-    }));
-    await writer.endWithPromise();
-  } else {
-    log.debug('Config file(s) already exist. Skipping creation.', configFiles);
-  }
+  // update config
+  const configWriter = getFileStreamWriter(configPath);
+  configWriter.write(yaml.safeDump(config));
+  await configWriter.endWithPromise();
 
   if (!isExistingPath(bookPath)) {
     createDirectory(bookPath);
