@@ -338,7 +338,7 @@ describe('Bookit', () => {
     const cx = new Bookit();
 
     const metaArray = await cx.buildBookMeta();
-    const fixedUuid = cx.addMissingUuid(metaArray);
+    const fixedUuid = await cx.addMissingUuid(metaArray);
     const diff = fixedUuid
       .map((m) => JSON.stringify(m))
       .filter((s) => !metaArray.map((m) => JSON.stringify(m)).includes(s))

@@ -2,6 +2,37 @@ import { get, merge, set } from 'lodash';
 import { basename, dirname } from 'path';
 import { Readable } from 'stream';
 
+const getLodashPath = (path) => {
+  const fileName = basename(path);
+  return fileName.includes('.')
+    ? `${dirname(path).split('/').join('.')}['${fileName}']`
+    : `${path.split('/').join('.')}`;
+};
+
+/* eslint max-classes-per-file: ["error", 2] */
+class MockWriteStream {
+  constructor(writeFunc) {
+    this.writeFunc = writeFunc;
+  }
+
+  write(str) {
+    try {
+      this.writeFunc(str);
+    } catch (e) {
+      this.reject(e);
+    }
+  }
+
+  on(event, func) {
+    if (event === 'finish') this.resolve = func;
+    if (event === 'error') this.reject = func;
+  }
+
+  end() {
+    this.resolve();
+  }
+}
+
 export default class BookStub {
   constructor(fsStub, cwdStub) {
     this.fsStub = fsStub;
@@ -19,24 +50,20 @@ export default class BookStub {
     this.fsStub.readFileSync.callsFake((path) => this.getFile(path));
     this.fsStub.createReadStream.callsFake((path) => Readable.from(this.getFile(path).split('\n')));
     this.fsStub.createWriteStream.callsFake((filePath) => {
-      const fileName = basename(filePath);
-      const fileLodashPath = `${dirname(filePath).split('/').join('.')}['${fileName}']`;
+      const fileLodashPath = getLodashPath(filePath);
       set(this.filesystem, fileLodashPath, ''); // new file
-      return {
-        write: (line) => {
-          const current = get(this.filesystem, fileLodashPath);
-          set(this.filesystem, fileLodashPath, current + line);
-        },
-      };
+      return new MockWriteStream((line) => {
+        const current = get(this.filesystem, fileLodashPath);
+        set(this.filesystem, fileLodashPath, current + line);
+      });
     });
     this.fsStub.rmdirSync.callsFake((path) => {
-      const fileLodashPath = `${path.split('/').join('.')}`;
-      set(this.filesystem, fileLodashPath, undefined); // "delete" folder
+      set(this.filesystem, getLodashPath(path), undefined); // "delete" folder
     });
     this.fsStub.mkdirSync.callsFake((path) => {
-      const fileLodashPath = `${path.split('/').join('.')}`;
-      set(this.filesystem, fileLodashPath, {}); // "new" folder
+      set(this.filesystem, getLodashPath(path), {}); // "new" folder
     });
+    this.fsStub.existsSync.callsFake((path) => get(this.filesystem, getLodashPath(path), null) !== null);
   }
 
   addRootFile(fileName, content) {

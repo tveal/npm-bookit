@@ -1,5 +1,4 @@
-import { log, setLogLevel } from '../utils';
-import { getInitConfigFromUser } from '../connector/user';
+import { log, setLogLevel, initialize } from '../utils';
 
 export default {
   command: 'init',
@@ -30,9 +29,8 @@ export default {
     setLogLevel(argv);
 
     try {
-      const things = await getInitConfigFromUser(argv);
+      await initialize(argv);
 
-      log.info(things);
       log.info('Initialized book successfully!');
     } catch (e) {
       log.error(e);

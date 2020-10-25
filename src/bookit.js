@@ -3,29 +3,32 @@ import { basename } from 'path';
 import {
   get, startCase, groupBy, forEach,
 } from 'lodash';
-import readline from 'readline';
 import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import {
   listDirectory,
   getFileContent,
-  readFileStream,
-  writeFileStream,
+  getFileStreamReader,
+  getFileStreamWriter,
   deleteDirectory,
   createDirectory,
 } from './connector/filesystem';
-import { log, formatLine } from './utils';
+import {
+  log, formatLine, listConfigFiles, allowedConfigFiles,
+} from './utils';
 
 export class Bookit {
   constructor() {
     log.info('HI!');
     log.error('Test err');
     log.debug('Test debug');
-    const configFiles = listDirectory(process.cwd()).filter((i) => allowedConfigFiles.includes(i));
-    this.configFile = `${process.cwd()}/${configFiles[0]}`;
+
+    const configFiles = listConfigFiles();
     if (configFiles.length !== 1) {
       throw Error('Cannot load config. Must have exactly 1 file in the project root;'
         + ` Supported names: [ ${allowedConfigFiles.join(', ')} ]`);
     }
+
+    this.configFile = `${process.cwd()}/${configFiles[0]}`;
     try {
       this.config = yaml.safeLoad(getFileContent(this.configFile));
     } catch (e) { /* istanbul ignore next */
@@ -56,8 +59,8 @@ export class Bookit {
       .then((files) => {
         log.debug('Building Files...');
         forEach(files, (v, i) => {
-          files[i].prev = i < 1 ? false : files[i-1].fileName;
-          files[i].next = i === files.length-1 ? false : files[i+1].fileName;
+          files[i].prev = i < 1 ? false : files[i - 1].fileName;
+          files[i].next = i === files.length - 1 ? false : files[i + 1].fileName;
         });
         return Promise.all(files.map((f) => this.buildFile(f, files)));
       });
@@ -82,8 +85,8 @@ export class Bookit {
 
   addMissingUuid(metaArray) {
     log.debug('Adding any missing UUIDs');
-    return metaArray.map((section) => {
-      const bookFiles = section.bookFiles
+    return Promise.all(metaArray.map(async (section) => {
+      const bookFiles = await Promise.all(section.bookFiles
         .map((file) => {
           if (file.fileName) return file;
           const uuid = uuidv4();
@@ -91,21 +94,22 @@ export class Bookit {
           const filePath = `${this.bookPath}/${fileName}`;
           const srcFilePath = `${this.srcPath}/${file.srcFile}`;
           const content = getFileContent(srcFilePath);
-          const writer = writeFileStream(srcFilePath);
+          const writer = getFileStreamWriter(srcFilePath);
           writer.write(`${uuid}\r\n`);
           writer.write(content);
           log.debug(`added uuid ${uuid} to ${file.srcFile}`);
-          return {
-            ...file,
-            fileName,
-            filePath,
-          };
-        });
+          return writer.endWithPromise()
+            .then(() => ({
+              ...file,
+              fileName,
+              filePath,
+            }));
+        }));
       return {
         ...section,
         bookFiles,
       };
-    });
+    }));
   }
 
   buildBookToc(metaArray) {
@@ -113,7 +117,7 @@ export class Bookit {
     const metaMap = groupBy(metaArray, (m) => m.folderName.replace(/\d+/g, ''));
 
     const fileArray = [];
-    const writer = writeFileStream(`${this.bookPath}/index.md`);
+    const writer = getFileStreamWriter(`${this.bookPath}/index.md`);
     const writeNonChapters = (section) => {
       const sectionTitle = this.formatSectionTitle(section);
       writer.write(`${sectionTitle}\r\n---\r\n`);
@@ -154,7 +158,8 @@ export class Bookit {
     get(metaMap, 'glossary', []).map(writeNonChapters);
     get(metaMap, 'appendix', []).map(writeNonChapters);
 
-    return fileArray;
+    return writer.endWithPromise()
+      .then(() => fileArray);
   }
 
   // https://doc.rust-lang.org/stable/book/
@@ -218,11 +223,6 @@ export class Bookit {
 
   // https://nodejs.org/api/readline.html#readline_example_read_file_stream_line_by_line
   async buildFileMeta(srcFile) {
-    const rl = readline.createInterface({
-      input: readFileStream(`${this.srcPath}/${srcFile}`),
-      crlfDelay: Infinity,
-    });
-
     let lineNumber = 0;
 
     // file props
@@ -230,10 +230,9 @@ export class Bookit {
     let fileName;
     let filePath;
 
-    // eslint-disable-next-line
-    for await (const line of rl) {
+    return getFileStreamReader(`${this.srcPath}/${srcFile}`, (line) => {
       lineNumber += 1;
-      if (lineNumber > 5 || title) break;
+      if (lineNumber > 5 || title) return -1;
 
       if (lineNumber === 1) {
         if (isUuid(line.trim())) {
@@ -249,25 +248,20 @@ export class Bookit {
       } else if (!title && line.startsWith('# ')) {
         title = line.substring(2);
       }
-    } // for each line
-    rl.close();
-
-    return {
-      title,
-      fileName,
-      filePath,
-      srcFile,
-    };
+      return 0;
+    })
+      .then(() => ({
+        title,
+        fileName,
+        filePath,
+        srcFile,
+      }));
   }
 
   async buildFile(fileMeta, files) {
     const {
       srcFile, next, prev, filePath,
     } = fileMeta;
-    const rl = readline.createInterface({
-      input: readFileStream(`${this.srcPath}/${srcFile}`),
-      crlfDelay: Infinity,
-    });
 
     let lineNumber = 0;
     let writer;
@@ -278,14 +272,13 @@ export class Bookit {
     if (next) navArray.push(`**[NEXT ⏩](./${next})**`);
     const nav = `${navArray.join(' | ')}\r\n\r\n`;
 
-    // eslint-disable-next-line
-    for await (const line of rl) {
+    return getFileStreamReader(`${this.srcPath}/${srcFile}`, (line) => {
       lineNumber += 1;
       // console.log('+++++line:', line);
 
       if (lineNumber === 1) {
         if (isUuid(line.trim())) {
-          writer = writeFileStream(filePath);
+          writer = getFileStreamWriter(filePath);
           writer.write(nav);
         } else {
           log.error(
@@ -293,7 +286,7 @@ export class Bookit {
               Add one to the first line of the file.
               Suggested uuid4: ${uuidv4()}`,
           );
-          break;
+          return -1;
         }
       } else {
         const context = {
@@ -304,19 +297,21 @@ export class Bookit {
         };
         writer.write(`${formatLine(line, context)}\r\n`);
       }
-    } // for each line
-    if (writer) writer.write(`\r\n\r\n---\r\n\r\n${nav}`);
-    rl.close();
-
-    log.debug(`built ${srcFile}`);
-    return fileMeta;
+      return 0;
+    })
+      .then(() => {
+        if (writer) {
+          writer.write(`\r\n\r\n---\r\n\r\n${nav}`);
+          return writer.endWithPromise().then(() => {
+            log.debug(`built ${srcFile}`);
+            return fileMeta;
+          });
+        } else {
+          return fileMeta;
+        }
+      });
   }
 }
-
-const allowedConfigFiles = [
-  'bookit.yml',
-  'bookit.yaml',
-];
 
 export const isValidChapter = (filename) => filename.includes('chapter')
   && !filename.includes('.');
