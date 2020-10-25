@@ -127,4 +127,19 @@ describe('Line Formatting', () => {
       'relative img path [here](../img/linux/tux.md)',
     ].join(' '));
   });
+  it('formatLine should replace book uuid link', () => {
+    const line = [
+      'ext img ln no title ![](https://github.com/something?query=param)',
+      'relative img path [here](../../book/8b7b8a0f-a14c-41b8-ac48-45ebe461bd92.md)',
+    ].join(' ');
+
+    const fmt = formatLine(line, {
+      srcFileNameMap, srcPath, imgPath, bookPath,
+    });
+
+    expect(fmt).to.equal([
+      'ext img ln no title ![](https://github.com/something?query=param)',
+      'relative img path [here](./8b7b8a0f-a14c-41b8-ac48-45ebe461bd92.md)',
+    ].join(' '));
+  });
 });

@@ -1,9 +1,11 @@
 import { basename, relative } from 'path';
+import { validate as isUuid } from 'uuid';
 
 /* eslint-disable import/prefer-default-export */
 export const formatLine = (line, context) => [{ ...context, line }]
   .map(replaceFileLinks)
-  .map(replaceImgLinks)[0].line;
+  .map(replaceImgLinks)
+  .map(replaceUuidLinks)[0].line;
 
 const replaceFileLinks = (data) => {
   let { line } = data;
@@ -32,6 +34,27 @@ const replaceImgLinks = (data) => {
   const replacements = links
     .filter((ln) => ln.includes(imgFolder))
     .map((ln) => [ln, `${relativeImgPath}/${ln.split(imgFolder)[1]}`].join(':'));
+  // console.log('replacements', replacements);
+  replacements.forEach((v) => {
+    line = line.replace(new RegExp(v.split(':')[0], 'g'), v.split(':')[1]);
+  });
+  return {
+    ...data,
+    line,
+  };
+};
+
+const replaceUuidLinks = (data) => {
+  let { line } = data;
+  const {
+    links, bookPath,
+  } = data;
+  const bookFolder = `/${basename(bookPath)}/`;
+
+  const replacements = links
+    .filter((ln) => ln.includes(bookFolder)
+      && isUuid(basename(ln).replace('.md', '')))
+    .map((ln) => [ln, `./${basename(ln)}`].join(':'));
   // console.log('replacements', replacements);
   replacements.forEach((v) => {
     line = line.replace(new RegExp(v.split(':')[0], 'g'), v.split(':')[1]);
