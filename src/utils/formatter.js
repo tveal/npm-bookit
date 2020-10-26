@@ -28,7 +28,7 @@ const replaceImgLinks = (data) => {
   const {
     links, imgPath, bookPath,
   } = data;
-  const imgFolder = `/${basename(imgPath)}/`;
+  const imgFolder = `/${relative(process.cwd(), imgPath)}/`;
   const relativeImgPath = relative(bookPath, imgPath);
 
   const replacements = links

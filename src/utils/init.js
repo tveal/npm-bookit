@@ -96,6 +96,16 @@ export const initialize = async (argv) => {
     log.debug('Source directory already exists. Skipping creation.');
   }
 
+  const homePath = `${srcPath}/home.md`;
+  if (!isExistingPath(homePath)) {
+    const writer = getFileStreamWriter(homePath);
+    writer.write(SEED_HOME);
+    await writer.endWithPromise();
+    log.debug('Created home.md', homePath);
+  } else {
+    log.debug('File home.md already exists. Skipping creation.');
+  }
+
   const seedChapterPath = `${srcPath}/chapter01`;
   if (!isExistingPath(seedChapterPath)) {
     createDirectory(seedChapterPath);
@@ -131,8 +141,16 @@ export const initialize = async (argv) => {
     readmeWriter.write(readme.content);
     readmeWriter.write(SEED_README);
     await readmeWriter.endWithPromise();
+    log.debug('Initialized bookit doc in README.', readme.path);
+  } else {
+    log.debug('README already has bookit doc. Skipping appendage');
   }
 };
+
+export const SEED_HOME = `# My New Handbook
+
+The content in the \`home.md\` file is added to the top of the Table-of-Contents
+`.replace(/\n/g, '\r\n');
 
 export const SEED_CHAPTER_SECTION = `
 

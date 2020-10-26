@@ -11,6 +11,7 @@ import {
   getFileStreamWriter,
   deleteDirectory,
   createDirectory,
+  isExistingPath,
 } from './connector/filesystem';
 import {
   log, formatLine, listConfigFiles, allowedConfigFiles,
@@ -18,10 +19,6 @@ import {
 
 export class Bookit {
   constructor() {
-    log.info('HI!');
-    log.error('Test err');
-    log.debug('Test debug');
-
     const configFiles = listConfigFiles();
     if (configFiles.length !== 1) {
       throw Error('Cannot load config. Must have exactly 1 file in the project root;'
@@ -112,12 +109,30 @@ export class Bookit {
     }));
   }
 
-  buildBookToc(metaArray) {
+  async buildBookToc(metaArray) {
     log.debug('Building TOC...');
     const metaMap = groupBy(metaArray, (m) => m.folderName.replace(/\d+/g, ''));
 
     const fileArray = [];
     const writer = getFileStreamWriter(`${this.bookPath}/index.md`);
+
+    const homePath = `${this.srcPath}/home.md`;
+    const context = {
+      srcFileNameMap: groupBy(metaArray.flatMap((m) => m.bookFiles), (f) => basename(f.srcFile)),
+      srcPath: this.srcPath,
+      imgPath: this.imgPath,
+      bookPath: this.bookPath,
+    };
+    if (isExistingPath(homePath)) {
+      await getFileStreamReader(homePath, (line) => {
+        writer.write(`${formatLine(line, context)}\r\n`);
+        return 0;
+      });
+      log.debug('Added home.md content to TOC');
+    } else { /* istanbul ignore next */
+      log.debug('No home.md file found. No Header will be added to the TOC.');
+    }
+
     const writeNonChapters = (section) => {
       const sectionTitle = this.formatSectionTitle(section);
       writer.write(`${sectionTitle}\r\n---\r\n`);
@@ -139,16 +154,6 @@ export class Bookit {
       writer.write('\r\n');
       return section;
     };
-
-    try {
-      const homeContent = getFileContent(`${this.srcPath}/home.md`);
-      if (homeContent) {
-        writer.write(homeContent);
-        log.debug('Added home.md content to TOC');
-      }
-    } catch (e) { /* istanbul ignore next */
-      log.debug('No home.md file found. No Header will be added to the TOC.');
-    }
     writer.write('\r\n\r\n');
 
     get(metaMap, 'preface', []).map(writeNonChapters);
@@ -157,9 +162,9 @@ export class Bookit {
     get(metaMap, 'chapter', []).map(writeChapters);
     get(metaMap, 'glossary', []).map(writeNonChapters);
     get(metaMap, 'appendix', []).map(writeNonChapters);
+    await writer.endWithPromise();
 
-    return writer.endWithPromise()
-      .then(() => fileArray);
+    return fileArray;
   }
 
   // https://doc.rust-lang.org/stable/book/
@@ -272,6 +277,12 @@ export class Bookit {
     if (next) navArray.push(`**[NEXT ⏩](./${next})**`);
     const nav = `${navArray.join(' | ')}\r\n\r\n`;
 
+    const context = {
+      srcFileNameMap: groupBy(files, (f) => basename(f.srcFile)),
+      srcPath: this.srcPath,
+      imgPath: this.imgPath,
+      bookPath: this.bookPath,
+    };
     return getFileStreamReader(`${this.srcPath}/${srcFile}`, (line) => {
       lineNumber += 1;
       // console.log('+++++line:', line);
@@ -289,12 +300,6 @@ export class Bookit {
           return -1;
         }
       } else {
-        const context = {
-          srcFileNameMap: groupBy(files, (f) => basename(f.srcFile)),
-          srcPath: this.srcPath,
-          imgPath: this.imgPath,
-          bookPath: this.bookPath,
-        };
         writer.write(`${formatLine(line, context)}\r\n`);
       }
       return 0;

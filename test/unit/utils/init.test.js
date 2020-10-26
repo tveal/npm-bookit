@@ -9,6 +9,7 @@ import BookStub from '../../fixtures/BookStub';
 
 import {
   initialize,
+  SEED_HOME,
   SEED_README,
   SEED_CHAPTER_SECTION,
 } from '../../../src/utils/init';
@@ -63,7 +64,8 @@ describe('initialize', () => {
       'book': {},
       'img': {},
       'src': {
-        chapter01: {
+        'home.md': SEED_HOME,
+        'chapter01': {
           '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
       },
@@ -104,7 +106,8 @@ describe('initialize', () => {
       'assets': {},
       'src': {
         book1: {
-          chapter01: {
+          'home.md': SEED_HOME,
+          'chapter01': {
             '01-getting-started.md': SEED_CHAPTER_SECTION,
           },
         },
@@ -142,7 +145,8 @@ describe('initialize', () => {
       'book': {},
       'assets': {},
       'src': {
-        chapter01: {
+        'home.md': SEED_HOME,
+        'chapter01': {
           '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
       },
@@ -179,7 +183,8 @@ describe('initialize', () => {
       'dist': {},
       'assets': {},
       'sources': {
-        chapter01: {
+        'home.md': SEED_HOME,
+        'chapter01': {
           '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
       },
@@ -193,6 +198,7 @@ describe('initialize', () => {
       .onCall(1)
       .resolves({ overrideConfig: false });
     const existingReadme = '# my-book\r\n';
+    const existingHome = '# My Handbook\r\n';
 
     const bookStub = initBookStub();
     bookStub.filesystem.testProject = {
@@ -203,7 +209,8 @@ describe('initialize', () => {
       },
       'img': { 'cats.png': 'meow' },
       'src': {
-        chapter01: {},
+        'home.md': existingHome,
+        'chapter01': {},
       },
     };
 
@@ -225,7 +232,8 @@ describe('initialize', () => {
       },
       'img': { 'cats.png': 'meow' },
       'src': {
-        chapter01: {},
+        'home.md': existingHome,
+        'chapter01': {},
       },
     });
   });
@@ -253,10 +261,11 @@ describe('initialize', () => {
       'book': {},
       'img': {},
       'src': {
-        chapter01: {
+        'home.md': SEED_HOME,
+        'chapter01': {
           '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
-        chapter02: {},
+        'chapter02': {},
       },
     });
   });
@@ -286,7 +295,8 @@ describe('initialize', () => {
       'book': {},
       'img': {},
       'src': {
-        chapter01: {
+        'home.md': SEED_HOME,
+        'chapter01': {
           'existing-file.md': 'I was already here. Do not delete me!',
         },
       },
@@ -328,22 +338,23 @@ describe('initialize', () => {
       'book': {},
       'img': {},
       'src': {
-        preface: {
+        'home.md': SEED_HOME,
+        'preface': {
           'preface.md': '\r\n\r\nReplace me with desired Preface content!\r\n\r\n',
         },
-        foreword: {
+        'foreword': {
           'foreword.md': '\r\n\r\nReplace me with desired Foreword content!\r\n\r\n',
         },
-        introduction: {
+        'introduction': {
           'introduction.md': '\r\n\r\nReplace me with desired Introduction content!\r\n\r\n',
         },
-        chapter01: {
+        'chapter01': {
           'existing-file.md': 'I was already here. Do not delete me!',
         },
-        glossary: {
+        'glossary': {
           'glossary.md': '\r\n\r\nReplace me with desired Glossary content!\r\n\r\n',
         },
-        appendix: {
+        'appendix': {
           'appendix.md': '\r\n\r\nReplace me with desired Appendix content!\r\n\r\n',
         },
       },
@@ -386,16 +397,17 @@ describe('initialize', () => {
       'book': {},
       'img': {},
       'src': {
-        preface: {
+        'home.md': SEED_HOME,
+        'preface': {
           'preface.md': '\r\n\r\nReplace me with desired Preface content!\r\n\r\n',
         },
-        foreword: {},
-        introduction: {},
-        chapter01: {
+        'foreword': {},
+        'introduction': {},
+        'chapter01': {
           'existing-file.md': 'I was already here. Do not delete me!',
         },
-        glossary: {},
-        appendix: {
+        'glossary': {},
+        'appendix': {
           'appendix.md': '\r\n\r\nReplace me with desired Appendix content!\r\n\r\n',
         },
       },

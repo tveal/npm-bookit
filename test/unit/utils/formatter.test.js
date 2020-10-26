@@ -1,7 +1,12 @@
 import { expect } from 'chai';
+import * as sinon from 'sinon';
 import { formatLine } from '../../../src/utils';
 
 describe('Line Formatting', () => {
+  beforeEach(() => {
+    sinon.stub(process, 'cwd').returns('testProject');
+  });
+  afterEach(sinon.restore);
   const imgPath = 'testProject/img';
   const srcPath = 'testProject/src';
   const bookPath = 'testProject/book';
@@ -115,16 +120,19 @@ describe('Line Formatting', () => {
   it('formatLine should replace img link', () => {
     const line = [
       'ext img ln no title ![](https://github.com/something?query=param)',
-      'relative img path [here](../../img/linux/tux.md)',
+      'relative img path [here](../assets/img/linux/tux.md)',
     ].join(' ');
 
     const fmt = formatLine(line, {
-      srcFileNameMap, srcPath, imgPath, bookPath,
+      srcFileNameMap,
+      srcPath: 'testProject/sources',
+      imgPath: 'testProject/assets/img',
+      bookPath: 'testProject/dist/handbook',
     });
 
     expect(fmt).to.equal([
       'ext img ln no title ![](https://github.com/something?query=param)',
-      'relative img path [here](../img/linux/tux.md)',
+      'relative img path [here](../../assets/img/linux/tux.md)',
     ].join(' '));
   });
   it('formatLine should replace book uuid link', () => {
