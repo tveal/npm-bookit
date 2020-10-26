@@ -1,3 +1,4 @@
+import { basename } from 'path';
 import {
   lowerCase, merge,
 } from 'lodash';
@@ -33,6 +34,18 @@ export const loadOrCreateConfig = async (argv, newConfig) => {
   return {
     config,
     configPath,
+  };
+};
+
+export const loadOrCreateReadme = () => {
+  const cwd = process.cwd();
+  const filename = listDirectory(cwd).filter((i) => 'readme.md'.includes(lowerCase(i)))[0]
+    || 'README.md';
+  const path = `${cwd}/${filename}`;
+  if (isExistingPath(path)) return { content: getFileContent(path), path };
+  return {
+    content: `# ${basename(cwd)}\r\n`,
+    path,
   };
 };
 
@@ -111,9 +124,17 @@ export const initialize = async (argv) => {
       sectionPath,
     };
   }));
+
+  const readme = loadOrCreateReadme();
+  if (!readme.content.includes(SEED_README)) {
+    const readmeWriter = getFileStreamWriter(readme.path);
+    readmeWriter.write(readme.content);
+    readmeWriter.write(SEED_README);
+    await readmeWriter.endWithPromise();
+  }
 };
 
-const SEED_CHAPTER_SECTION = `
+export const SEED_CHAPTER_SECTION = `
 
 # Let's Get Started!
 
@@ -124,4 +145,14 @@ const getSeedContentForSection = (section) => `
 
 Replace me with desired ${section} content!
 
+`.replace(/\n/g, '\r\n');
+
+export const SEED_README = `
+
+## Bookit Generation Tool
+
+To rebuild this book from source
+\`\`\`
+npx bookit build
+\`\`\`
 `.replace(/\n/g, '\r\n');

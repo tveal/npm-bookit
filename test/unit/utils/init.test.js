@@ -7,8 +7,11 @@ import fs from 'fs';
 
 import BookStub from '../../fixtures/BookStub';
 
-import { initialize } from '../../../src/utils/init';
-// import { getInitConfigFromUser } from '../../../src/connector/user';
+import {
+  initialize,
+  SEED_README,
+  SEED_CHAPTER_SECTION,
+} from '../../../src/utils/init';
 
 let fsStub;
 let cwdStub;
@@ -18,6 +21,7 @@ const initBookStub = () => new BookStub(
 );
 
 describe('initialize', () => {
+  const README_CONTENT = `# testProject\r\n${SEED_README}`;
   const config = yaml.safeDump({
     bookSrc: 'src',
     bookDst: 'book',
@@ -46,20 +50,21 @@ describe('initialize', () => {
     await initialize({});
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
-    expect(bookStub.filesystem.testProject).to.deep.equal({
-      'bookit.yml': yaml.safeDump({
-        bookSrc: 'src',
-        bookDst: 'book',
-        imgDir: 'img',
-        chapterTitles: {
-          1: 'Hello World!',
-        },
-      }),
+    expect(yaml.safeLoad(bookStub.filesystem.testProject['bookit.yml'])).to.deep.equal({
+      bookSrc: 'src',
+      bookDst: 'book',
+      imgDir: 'img',
+      chapterTitles: {
+        1: 'Hello World!',
+      },
+    });
+    expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
+      'README.md': README_CONTENT,
       'book': {},
       'img': {},
       'src': {
         chapter01: {
-          '01-getting-started.md': "\r\n\r\n# Let's Get Started!\r\n\r\nCreate markdown (*.md) files in their respective folder locations.\r\n",
+          '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
       },
     });
@@ -83,15 +88,16 @@ describe('initialize', () => {
     await initialize({});
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
-    expect(bookStub.filesystem.testProject).to.deep.equal({
-      'bookit.yml': yaml.safeDump({
-        bookSrc: 'src/book1',
-        bookDst: 'published/book1',
-        imgDir: 'assets',
-        chapterTitles: {
-          1: 'Hello World!',
-        },
-      }),
+    expect(yaml.safeLoad(bookStub.filesystem.testProject['bookit.yml'])).to.deep.equal({
+      bookSrc: 'src/book1',
+      bookDst: 'published/book1',
+      imgDir: 'assets',
+      chapterTitles: {
+        1: 'Hello World!',
+      },
+    });
+    expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
+      'README.md': README_CONTENT,
       'published': {
         book1: {},
       },
@@ -99,7 +105,7 @@ describe('initialize', () => {
       'src': {
         book1: {
           chapter01: {
-            '01-getting-started.md': "\r\n\r\n# Let's Get Started!\r\n\r\nCreate markdown (*.md) files in their respective folder locations.\r\n",
+            '01-getting-started.md': SEED_CHAPTER_SECTION,
           },
         },
       },
@@ -123,20 +129,21 @@ describe('initialize', () => {
     await initialize({ custom: true });
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
-    expect(bookStub.filesystem.testProject).to.deep.equal({
-      'bookit.yml': yaml.safeDump({
-        bookSrc: 'src',
-        bookDst: 'book',
-        imgDir: 'assets',
-        chapterTitles: {
-          1: 'Tool Setup',
-        },
-      }),
+    expect(yaml.safeLoad(bookStub.filesystem.testProject['bookit.yml'])).to.deep.equal({
+      bookSrc: 'src',
+      bookDst: 'book',
+      imgDir: 'assets',
+      chapterTitles: {
+        1: 'Tool Setup',
+      },
+    });
+    expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
+      'README.md': README_CONTENT,
       'book': {},
       'assets': {},
       'src': {
         chapter01: {
-          '01-getting-started.md': "\r\n\r\n# Let's Get Started!\r\n\r\nCreate markdown (*.md) files in their respective folder locations.\r\n",
+          '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
       },
     });
@@ -159,34 +166,37 @@ describe('initialize', () => {
     await initialize({ custom: true });
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
-    expect(bookStub.filesystem.testProject).to.deep.equal({
-      'bookit.yml': yaml.safeDump({
-        bookSrc: 'sources',
-        bookDst: 'dist',
-        chapterTitles: {
-          1: 'Hello World!',
-        },
-        imgDir: 'assets',
-      }),
+    expect(yaml.safeLoad(bookStub.filesystem.testProject['bookit.yml'])).to.deep.equal({
+      bookSrc: 'sources',
+      bookDst: 'dist',
+      chapterTitles: {
+        1: 'Hello World!',
+      },
+      imgDir: 'assets',
+    });
+    expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
+      'README.md': README_CONTENT,
       'dist': {},
       'assets': {},
       'sources': {
         chapter01: {
-          '01-getting-started.md': "\r\n\r\n# Let's Get Started!\r\n\r\nCreate markdown (*.md) files in their respective folder locations.\r\n",
+          '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
       },
     });
   });
 
-  it('should skip folders if exist', async () => {
+  it('should skip folders if exist and add to existing readme', async () => {
     sinon.stub(inquirer, 'prompt')
       .onCall(0)
       .resolves({ sections: [] })
       .onCall(1)
       .resolves({ overrideConfig: false });
+    const existingReadme = '# my-book\r\n';
 
     const bookStub = initBookStub();
     bookStub.filesystem.testProject = {
+      'README.md': existingReadme,
       'bookit.yml': config,
       'book': {
         'f377f770-261c-4d5a-b752-0a94f18ff0b8.md': 'something...',
@@ -200,15 +210,16 @@ describe('initialize', () => {
     await initialize({});
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
-    expect(bookStub.filesystem.testProject).to.deep.equal({
-      'bookit.yml': yaml.safeDump({
-        bookSrc: 'src',
-        bookDst: 'book',
-        imgDir: 'img',
-        chapterTitles: {
-          1: 'Tool Setup',
-        },
-      }),
+    expect(yaml.safeLoad(bookStub.filesystem.testProject['bookit.yml'])).to.deep.equal({
+      bookSrc: 'src',
+      bookDst: 'book',
+      imgDir: 'img',
+      chapterTitles: {
+        1: 'Tool Setup',
+      },
+    });
+    expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
+      'README.md': existingReadme + SEED_README,
       'book': {
         'f377f770-261c-4d5a-b752-0a94f18ff0b8.md': 'something...',
       },
@@ -238,11 +249,12 @@ describe('initialize', () => {
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
     expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
-      book: {},
-      img: {},
-      src: {
+      'README.md': README_CONTENT,
+      'book': {},
+      'img': {},
+      'src': {
         chapter01: {
-          '01-getting-started.md': "\r\n\r\n# Let's Get Started!\r\n\r\nCreate markdown (*.md) files in their respective folder locations.\r\n",
+          '01-getting-started.md': SEED_CHAPTER_SECTION,
         },
         chapter02: {},
       },
@@ -270,10 +282,10 @@ describe('initialize', () => {
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
     expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
-      // 'bookit.yml': config,
-      book: {},
-      img: {},
-      src: {
+      'README.md': README_CONTENT,
+      'book': {},
+      'img': {},
+      'src': {
         chapter01: {
           'existing-file.md': 'I was already here. Do not delete me!',
         },
@@ -281,7 +293,7 @@ describe('initialize', () => {
     });
   });
 
-  it('should create sections', async () => {
+  it('should create sections and leave readme untouched if already init', async () => {
     sinon.stub(inquirer, 'prompt')
       .onCall(0)
       .resolves({
@@ -295,9 +307,11 @@ describe('initialize', () => {
       })
       .onCall(1)
       .resolves({ overrideConfig: false });
+    const existingReadme = '# my-book\r\n';
 
     const bookStub = initBookStub();
     bookStub.filesystem.testProject = {
+      'README.md': existingReadme + SEED_README,
       'bookit.yml': config,
       'src': {
         chapter01: {
@@ -310,10 +324,10 @@ describe('initialize', () => {
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
     expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
-      // 'bookit.yml': config,
-      book: {},
-      img: {},
-      src: {
+      'README.md': existingReadme + SEED_README,
+      'book': {},
+      'img': {},
+      'src': {
         preface: {
           'preface.md': '\r\n\r\nReplace me with desired Preface content!\r\n\r\n',
         },
@@ -368,10 +382,10 @@ describe('initialize', () => {
 
     // console.log(JSON.stringify(bookStub.filesystem.testProject, null, 2));
     expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
-      // 'bookit.yml': config,
-      book: {},
-      img: {},
-      src: {
+      'README.md': README_CONTENT,
+      'book': {},
+      'img': {},
+      'src': {
         preface: {
           'preface.md': '\r\n\r\nReplace me with desired Preface content!\r\n\r\n',
         },
