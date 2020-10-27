@@ -71,9 +71,9 @@ export class Bookit {
       : `[**${title}**](./${bookFiles[0].fileName})`;
   }
 
-  formatChapterFileLink(file, chapter) {
+  formatChapterFileLink(file, chapter, index) {
     const { srcFile, fileName, title } = file;
-    const num = `${chapter}.${Number(basename(srcFile).replace(/\D+/g, ''))}`;
+    const num = `${chapter}.${index}`;
 
     return title
       ? `[${num} ${title}](./${fileName})`
@@ -144,10 +144,12 @@ export class Bookit {
       const sectionTitle = this.formatSectionTitle(section);
       writer.write(`${sectionTitle}\r\n---\r\n`);
       log.debug(sectionTitle);
+      let index = 0;
       section.bookFiles.map((file) => {
-        const chLink = `- ${this.formatChapterFileLink(file, section.chapter)}`;
+        const chLink = `- ${this.formatChapterFileLink(file, section.chapter, index)}`;
         writer.write(`${chLink}\r\n`);
         log.debug(chLink);
+        index += 1;
         return file;
       });
       fileArray.push(...section.bookFiles);

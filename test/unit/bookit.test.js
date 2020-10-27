@@ -410,7 +410,7 @@ describe('Bookit', () => {
       '---',
       'Chapter 1: **Tool Setup**',
       '---',
-      '- [1.1 Install Node](./f377f770-261c-4d5a-b752-0a94f18ff0b8.md)',
+      '- [1.0 Install Node](./f377f770-261c-4d5a-b752-0a94f18ff0b8.md)',
       // next line has a runtime variable uuid
     ].join('\r\n'));
   });
@@ -442,7 +442,7 @@ describe('Bookit', () => {
     const title = new Bookit().formatChapterFileLink({
       srcFile: 'chapter03/01-some-page.md',
       fileName: 'ebdde1f6-3dfb-4fb0-8c9e-c2192e73b050.md',
-    }, 3);
+    }, 3, 1);
     expect(title).to.equal('[3.1 some page](./ebdde1f6-3dfb-4fb0-8c9e-c2192e73b050.md)');
   });
   it('sanity check: stub cwd()', () => {
