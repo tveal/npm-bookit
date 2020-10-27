@@ -137,22 +137,37 @@ export class Bookit {
       const sectionTitle = this.formatSectionTitle(section);
       writer.write(`${sectionTitle}\r\n---\r\n`);
       log.debug(sectionTitle);
-      fileArray.push(...section.bookFiles);
+      const sectionNav = [];
+      let index = 1; // page 1
+      section.bookFiles.map((file) => {
+        sectionNav.push({
+          title: `page ${index}`,
+          fileName: file.fileName,
+        });
+        index += 1;
+        return file;
+      });
+      fileArray.push(...section.bookFiles.map((f) => ({ ...f, sectionNav, sectionTitle })));
       return section;
     };
     const writeChapters = (section) => {
       const sectionTitle = this.formatSectionTitle(section);
       writer.write(`${sectionTitle}\r\n---\r\n`);
       log.debug(sectionTitle);
-      let index = 0;
+      const sectionNav = [];
+      let index = 0; // chapter 1.0
       section.bookFiles.map((file) => {
+        sectionNav.push({
+          title: `${section.chapter}.${index}`,
+          fileName: file.fileName,
+        });
         const chLink = `- ${this.formatChapterFileLink(file, section.chapter, index)}`;
         writer.write(`${chLink}\r\n`);
         log.debug(chLink);
         index += 1;
         return file;
       });
-      fileArray.push(...section.bookFiles);
+      fileArray.push(...section.bookFiles.map((f) => ({ ...f, sectionNav, sectionTitle })));
       writer.write('\r\n');
       return section;
     };
@@ -245,12 +260,6 @@ export class Bookit {
         if (isUuid(line.trim())) {
           fileName = `${line.trim()}.md`;
           filePath = `${this.bookPath}/${fileName}`;
-        } else {
-          log.debug(
-            `Warning - no uuid4 for ${srcFile}.
-              Add one to the first line of the file.
-              Suggested uuid4: ${uuidv4()}`,
-          );
         }
       } else if (!title && line.startsWith('# ')) {
         title = line.substring(2);
@@ -267,7 +276,7 @@ export class Bookit {
 
   async buildFile(fileMeta, files) {
     const {
-      srcFile, next, prev, filePath,
+      srcFile, next, prev, filePath, sectionTitle, sectionNav, fileName,
     } = fileMeta;
 
     let lineNumber = 0;
@@ -278,6 +287,14 @@ export class Bookit {
     navArray.push('**[HOME](./index.md)**');
     if (next) navArray.push(`**[NEXT ⏩](./${next})**`);
     const nav = `${navArray.join(' | ')}\r\n\r\n`;
+    const sectionHeader = [
+      `> ${sectionTitle}`,
+      '>',
+      `> ${sectionNav.map((n) => (n.fileName === fileName
+        ? `**${n.title}**`
+        : `[${n.title}](./${n.fileName})`)).join(' |\r\n')}`,
+      '\r\n',
+    ].join('\r\n');
 
     const context = {
       srcFileNameMap: groupBy(files, (f) => basename(f.srcFile)),
@@ -293,6 +310,7 @@ export class Bookit {
         if (isUuid(line.trim())) {
           writer = getFileStreamWriter(filePath);
           writer.write(nav);
+          if (sectionNav.length > 1) writer.write(sectionHeader);
         } else {
           log.error(
             `ERROR no uuid4 for ${srcFile}.

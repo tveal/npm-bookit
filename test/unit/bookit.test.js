@@ -164,13 +164,57 @@ describe('Bookit', () => {
     const builtFile = await loader.buildFile({
       srcFile: `${chapter.folderName}/${chapter.files[0]}`,
       filePath: 'testProject/book/f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+      sectionTitle: 'Chapter 1: **Install Tools**',
+      fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+      sectionNav: [
+        {
+          title: '1.0',
+          fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+        },
+        {
+          title: '1.1',
+          fileName: '700af3c6-9a77-4964-bfa7-489b6c208e16.md',
+        },
+      ],
     });
     expect(builtFile).to.deep.equal({
       filePath: 'testProject/book/f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
       srcFile: 'chapter01/01-node.md',
+      sectionTitle: 'Chapter 1: **Install Tools**',
+      fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+      sectionNav: [
+        {
+          title: '1.0',
+          fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+        },
+        {
+          title: '1.1',
+          fileName: '700af3c6-9a77-4964-bfa7-489b6c208e16.md',
+        },
+      ],
     });
-    expect(bookStub.getBookFile('f377f770-261c-4d5a-b752-0a94f18ff0b8.md'))
-      .to.equal('**[HOME](./index.md)**\r\n\r\n\r\n# Install Node\r\n\r\nBlob\r\n\r\n\r\n---\r\n\r\n**[HOME](./index.md)**\r\n\r\n');
+    expect(bookStub.getBookFile('f377f770-261c-4d5a-b752-0a94f18ff0b8.md').split('\r\n'))
+      .to.deep.equal([
+        '**[HOME](./index.md)**',
+        '',
+        '> Chapter 1: **Install Tools**',
+        '>',
+        '> **1.0** |',
+        '[1.1](./700af3c6-9a77-4964-bfa7-489b6c208e16.md)',
+        '',
+        '',
+        '# Install Node',
+        '',
+        'Blob',
+        '',
+        '',
+        '---',
+        '',
+        '**[HOME](./index.md)**',
+        '',
+        '',
+      ]);
+    // .to.deep.equal('**[HOME](./index.md)**\r\n\r\n\r\n# Install Node\r\n\r\nBlob\r\n\r\n\r\n---\r\n\r\n**[HOME](./index.md)**\r\n\r\n');
   });
   it('buildFile should NOT port src file to dst without valid UUIDv4', async () => {
     const bookStub = initBookStub()
@@ -183,9 +227,33 @@ describe('Bookit', () => {
 
     const builtFile = await loader.buildFile({
       srcFile: `${chapter.folderName}/${chapter.files[1]}`,
+      sectionTitle: 'Chapter 1: **Install Tools**',
+      fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+      sectionNav: [
+        {
+          title: '1.0',
+          fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+        },
+        {
+          title: '1.1',
+          fileName: '700af3c6-9a77-4964-bfa7-489b6c208e16.md',
+        },
+      ],
     });
     expect(builtFile).to.deep.equal({
       srcFile: 'chapter01/02-ide.md',
+      sectionTitle: 'Chapter 1: **Install Tools**',
+      fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+      sectionNav: [
+        {
+          title: '1.0',
+          fileName: 'f377f770-261c-4d5a-b752-0a94f18ff0b8.md',
+        },
+        {
+          title: '1.1',
+          fileName: '700af3c6-9a77-4964-bfa7-489b6c208e16.md',
+        },
+      ],
     });
     expect(bookStub.filesystem.testProject.book).to.deep.equal({});
   });
