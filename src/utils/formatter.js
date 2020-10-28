@@ -1,7 +1,12 @@
 import { basename, dirname, relative } from 'path';
-import { validate as isUuid } from 'uuid';
+import { v4 as uuidv4, validate as isUuid } from 'uuid';
 
-/* eslint-disable import/prefer-default-export */
+// for unit test mocking... ugh
+export const UuidUtils = {
+  generate: () => uuidv4(),
+  validate: (u) => isUuid(u),
+};
+
 export const formatLine = (line, context) => [{ ...context, line }]
   .map(adornLinks)
   .map(replaceFileLinks)
@@ -59,7 +64,7 @@ const replaceUuidLinks = (data) => {
 
   const replacements = links
     .filter((ln) => ln.includes(bookFolder)
-      && isUuid(basename(ln).replace('.md', '')))
+      && UuidUtils.validate(basename(ln).replace('.md', '')))
     .map((ln) => [ln, `./${basename(ln)}`].join(':'));
   // console.log('replacements', replacements);
   replacements.forEach((v) => {

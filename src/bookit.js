@@ -3,7 +3,6 @@ import { basename } from 'path';
 import {
   get, startCase, groupBy, forEach,
 } from 'lodash';
-import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import {
   listDirectory,
   getFileContent,
@@ -14,7 +13,7 @@ import {
   isExistingPath,
 } from './connector/filesystem';
 import {
-  log, formatLine, listConfigFiles, allowedConfigFiles, lintFile,
+  log, formatLine, listConfigFiles, allowedConfigFiles, lintFile, UuidUtils,
 } from './utils';
 
 export class Bookit {
@@ -97,7 +96,7 @@ export class Bookit {
       const bookFiles = await Promise.all(section.bookFiles
         .map((file) => {
           if (file.fileName) return file;
-          const uuid = uuidv4();
+          const uuid = UuidUtils.generate();
           const fileName = `${uuid}.md`;
           const filePath = `${this.bookPath}/${fileName}`;
           const srcFilePath = `${this.srcPath}/${file.srcFile}`;
@@ -184,8 +183,8 @@ export class Bookit {
     };
     writer.write('\r\n\r\n');
 
-    get(metaMap, 'preface', []).map(writeNonChapters);
     get(metaMap, 'foreword', []).map(writeNonChapters);
+    get(metaMap, 'preface', []).map(writeNonChapters);
     get(metaMap, 'introduction', []).map(writeNonChapters);
     get(metaMap, 'chapter', []).map(writeChapters);
     get(metaMap, 'glossary', []).map(writeNonChapters);
@@ -268,11 +267,12 @@ export class Bookit {
       if (lineNumber > 5 || title) return -1;
 
       if (lineNumber === 1) {
-        if (isUuid(line.trim())) {
+        if (UuidUtils.validate(line.trim())) {
           fileName = `${line.trim()}.md`;
           filePath = `${this.bookPath}/${fileName}`;
         }
-      } else if (!title && line.startsWith('# ')) {
+      }
+      if (!title && line.startsWith('# ')) {
         title = line.substring(2);
       }
       return 0;
@@ -318,7 +318,7 @@ export class Bookit {
       // console.log('+++++line:', line);
 
       if (lineNumber === 1) {
-        if (isUuid(line.trim())) {
+        if (UuidUtils.validate(line.trim())) {
           writer = getFileStreamWriter(filePath);
           writer.write(nav);
           if (sectionNav.length > 1) writer.write(sectionHeader);
@@ -326,7 +326,7 @@ export class Bookit {
           log.error(
             `ERROR no uuid4 for ${srcFile}.
               Add one to the first line of the file.
-              Suggested uuid4: ${uuidv4()}`,
+              Suggested uuid4: ${UuidUtils.generate()}`,
           );
           return -1;
         }

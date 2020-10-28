@@ -3,6 +3,7 @@ import yaml from 'js-yaml';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 import { omit, omitBy } from 'lodash';
+import { UuidUtils } from '../../src/utils';
 import { Bookit } from '../../src/bookit';
 import BookStub from '../fixtures/BookStub';
 import {
@@ -466,6 +467,7 @@ describe('Bookit', () => {
       .addSrcFile('glossary', 'glossy2.md', FILE_GLOSSARY_PAGE2)
       .addSrcFile('appendix', 'appendix.md', FILE_APPENDIX);
 
+    sinon.stub(UuidUtils, 'generate').returns('66ee5f7a-6ef9-439f-bf2f-982486b43a82');
     const cx = new Bookit();
 
     const book = await cx.buildBook();
@@ -473,8 +475,8 @@ describe('Bookit', () => {
     // console.log(bookStub.filesystem.testProject.book);
     expect(book.length).to.equal(9);
     expect(book.map((f) => f.srcFile)).to.deep.equal([
-      'preface/preface.md',
       'foreword/foreword.md',
+      'preface/preface.md',
       'introduction/page1.md',
       'introduction/page2.md',
       'chapter01/01-node.md',
@@ -485,23 +487,29 @@ describe('Bookit', () => {
     ]);
     expect(Object.keys(bookStub.filesystem.testProject.book).length).to.equal(10); // index TOC
     // console.log(bookStub.filesystem.testProject.book['index.md']);
-    expect(bookStub.filesystem.testProject.book['index.md']).to.include([
+    expect(bookStub.filesystem.testProject.book['index.md'].split('\r\n')).to.deep.equal([
       '# Aloha Honua!',
       '',
       'A book of randomness...',
       '',
       '',
-      '[**Preface**](./8b7b8a0f-a14c-41b8-ac48-45ebe461bd92.md)',
-      '---',
       '[**Foreword**](./8fc14b25-33a0-48d3-b99f-35042aba0caa.md)',
+      '---',
+      '[**Preface**](./8b7b8a0f-a14c-41b8-ac48-45ebe461bd92.md)',
       '---',
       '[**Introduction**](./c2b5996a-428d-4c36-b4e8-e02c3953ed44.md)',
       '---',
       'Chapter 1: **Tool Setup**',
       '---',
       '- [1.0 Install Node](./f377f770-261c-4d5a-b752-0a94f18ff0b8.md)',
-      // next line has a runtime variable uuid
-    ].join('\r\n'));
+      '- [1.1 Setup Integrated Development Env](./66ee5f7a-6ef9-439f-bf2f-982486b43a82.md)',
+      '',
+      '[**Glossary**](./64e4bf19-55fc-4d4e-95b7-670235d8b16c.md)',
+      '---',
+      '[**Appendix**](./40cb2ae8-8d99-49e9-9fdc-8d60e6862548.md)',
+      '---',
+      '',
+    ]);
   });
   it('buildBook should cleanup old book files', async () => {
     const bookStub = initBookStub()

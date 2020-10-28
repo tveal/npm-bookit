@@ -11,7 +11,10 @@
   ],
   "scripts": {
     "clean": "rm -rf .nyc_output/ coverage/",
-    "build": "babel src --out-dir lib",
+    "init:doc": "node lib/index.js init",
+    "build:pkg": "babel src --out-dir lib",
+    "build:doc": "node lib/index.js build -d",
+    "build": "npm run build:pkg && npm run build:doc",
     "lint": "npm run lint:js",
     "lint:js": "eslint --fix --format=node_modules/eslint-formatter-pretty .",
     "lint:staged": "lint-staged",
