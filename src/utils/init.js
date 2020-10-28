@@ -59,7 +59,7 @@ export const initialize = async (argv) => {
   } = await getInitConfigFromUser(argv);
 
   const { config, configPath } = await loadOrCreateConfig(argv, {
-    bookSrc, bookDst, imgDir, chapterTitles: { 1: 'Hello World!' },
+    bookSrc, bookDst, imgDir, lintSrc: true, chapterTitles: { 1: 'Hello World!' },
   });
   const cwd = process.cwd();
   const srcPath = `${cwd}/${config.bookSrc}`;

@@ -14,11 +14,12 @@ import {
   isExistingPath,
 } from './connector/filesystem';
 import {
-  log, formatLine, listConfigFiles, allowedConfigFiles,
+  log, formatLine, listConfigFiles, allowedConfigFiles, lintFile,
 } from './utils';
 
 export class Bookit {
-  constructor() {
+  constructor(argv = {}) {
+    const { nolint } = argv;
     const configFiles = listConfigFiles();
     if (configFiles.length !== 1) {
       throw Error('Cannot load config. Must have exactly 1 file in the project root;'
@@ -31,6 +32,9 @@ export class Bookit {
     } catch (e) { /* istanbul ignore next */
       throw Error(`Failed to load ${this.configFile || 'config'} file.`);
     }
+    this.lintSrc = nolint === true
+      ? this.lintSrc = false
+      : get(this, 'config.lintSrc', true);
     this.srcPath = `${process.cwd()}/${get(this, 'config.bookSrc', 'src')}`;
     this.bookPath = `${process.cwd()}/${get(this, 'config.bookDst', 'book')}`;
     this.imgPath = `${process.cwd()}/${get(this, 'config.imgDir', 'img')}`;
@@ -60,6 +64,13 @@ export class Bookit {
           files[i].next = i === files.length - 1 ? false : files[i + 1].fileName;
         });
         return Promise.all(files.map((f) => this.buildFile(f, files)));
+      })
+      .then(async (files) => {
+        if (this.lintSrc) {
+          log.debug('Linting Src Files...');
+          await Promise.all(files.map((f) => this.lintFile(f, files)));
+        }
+        return files;
       });
   }
 
@@ -335,6 +346,21 @@ export class Bookit {
           return fileMeta;
         }
       });
+  }
+
+  async lintFile(fileMeta, files) {
+    const { srcFile } = fileMeta;
+    const srcFilePath = `${this.srcPath}/${srcFile}`;
+    const content = getFileContent(srcFilePath);
+    const writer = getFileStreamWriter(srcFilePath);
+    const context = {
+      srcFilePath,
+      bookPath: this.bookPath,
+      srcFileNameMap: groupBy(files, (f) => basename(f.srcFile)),
+    };
+    writer.write(lintFile(content, context));
+    log.debug(`linted source file ${srcFile}`);
+    return writer.endWithPromise().then(() => fileMeta);
   }
 }
 

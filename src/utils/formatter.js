@@ -1,16 +1,22 @@
-import { basename, relative } from 'path';
+import { basename, dirname, relative } from 'path';
 import { validate as isUuid } from 'uuid';
 
 /* eslint-disable import/prefer-default-export */
 export const formatLine = (line, context) => [{ ...context, line }]
+  .map(adornLinks)
   .map(replaceFileLinks)
   .map(replaceImgLinks)
   .map(replaceUuidLinks)[0].line;
 
+export const lintFile = (content, context) => [{ ...context, line: content }]
+  .map(adornLinks)
+  .map(lintSrcFileLinks)[0].line;
+
+const adornLinks = (data) => ({ ...data, links: getMarkdownLinks(data.line) });
+
 const replaceFileLinks = (data) => {
   let { line } = data;
-  const { srcFileNameMap } = data;
-  const links = getMarkdownLinks(line);
+  const { srcFileNameMap, links } = data;
 
   const replacements = links.flatMap((ln) => {
     const matches = Object.keys(srcFileNameMap).filter((srcFileName) => ln.includes(srcFileName));
@@ -63,6 +69,27 @@ const replaceUuidLinks = (data) => {
     ...data,
     line,
   };
+};
+
+const lintSrcFileLinks = (data) => {
+  let { line } = data;
+  const {
+    links,
+    bookPath,
+    srcFilePath,
+    srcFileNameMap,
+  } = data;
+  const relativeBookPath = relative(dirname(srcFilePath), bookPath);
+
+  const replacements = links.flatMap((ln) => {
+    const matches = Object.keys(srcFileNameMap).filter((srcFileName) => ln.includes(srcFileName));
+    return matches.map((m) => [ln, `${relativeBookPath}/${srcFileNameMap[m][0].fileName}`].join(':'));
+  });
+  // console.log('replacements', replacements);
+  replacements.forEach((v) => {
+    line = line.replace(new RegExp(v.split(':')[0], 'g'), v.split(':')[1]);
+  });
+  return { ...data, line };
 };
 
 // https://regexr.com/

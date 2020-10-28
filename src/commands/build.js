@@ -5,6 +5,10 @@ export default {
   command: 'build',
   describe: 'build bookmark-able living book (constant urls)',
   builder: {
+    nolint: {
+      type: 'boolean',
+      describe: 'skip src file linting',
+    },
     debug: {
       alias: 'd',
       type: 'boolean',
@@ -25,7 +29,7 @@ export default {
     setLogLevel(argv);
 
     try {
-      await new Bookit().buildBook();
+      await new Bookit(argv).buildBook();
       log.info('Book built successfully!');
     } catch (e) {
       log.error(e);

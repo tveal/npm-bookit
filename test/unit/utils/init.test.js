@@ -55,6 +55,7 @@ describe('initialize', () => {
       bookSrc: 'src',
       bookDst: 'book',
       imgDir: 'img',
+      lintSrc: true,
       chapterTitles: {
         1: 'Hello World!',
       },
@@ -94,6 +95,7 @@ describe('initialize', () => {
       bookSrc: 'src/book1',
       bookDst: 'published/book1',
       imgDir: 'assets',
+      lintSrc: true,
       chapterTitles: {
         1: 'Hello World!',
       },
@@ -136,6 +138,7 @@ describe('initialize', () => {
       bookSrc: 'src',
       bookDst: 'book',
       imgDir: 'assets',
+      lintSrc: true,
       chapterTitles: {
         1: 'Tool Setup',
       },
@@ -173,10 +176,11 @@ describe('initialize', () => {
     expect(yaml.safeLoad(bookStub.filesystem.testProject['bookit.yml'])).to.deep.equal({
       bookSrc: 'sources',
       bookDst: 'dist',
+      imgDir: 'assets',
+      lintSrc: true,
       chapterTitles: {
         1: 'Hello World!',
       },
-      imgDir: 'assets',
     });
     expect(omit(bookStub.filesystem.testProject, 'bookit.yml')).to.deep.equal({
       'README.md': README_CONTENT,
@@ -221,6 +225,7 @@ describe('initialize', () => {
       bookSrc: 'src',
       bookDst: 'book',
       imgDir: 'img',
+      lintSrc: true,
       chapterTitles: {
         1: 'Tool Setup',
       },

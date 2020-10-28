@@ -49,6 +49,27 @@ describe('Bookit', () => {
     expect(bookit.srcPath).to.equal('testProject/src');
     expect(bookit.bookPath).to.equal('testProject/book');
     expect(bookit.imgPath).to.equal('testProject/img');
+    expect(bookit.lintSrc).to.be.true;
+  });
+  it('constructor should set lintSrc from persisted config', () => {
+    initBookStub()
+      .addRootFile('bookit.yml', yaml.safeDump({
+        lintSrc: false,
+      }));
+
+    const bookit = new Bookit();
+
+    expect(bookit.lintSrc).to.be.false;
+  });
+  it('constructor should set lintSrc from argv', () => {
+    initBookStub()
+      .addRootFile('bookit.yml', yaml.safeDump({
+        lintSrc: true,
+      }));
+
+    const bookit = new Bookit({ nolint: true });
+
+    expect(bookit.lintSrc).to.be.false;
   });
   it('constructor should throw error for no config file', () => {
     initBookStub();
@@ -489,7 +510,7 @@ describe('Bookit', () => {
       .addBookFile('leftovers.md', 'DejaVu!')
       .addSrcFile('chapter01', '01-node.md', FILE_INSTALL_NODE);
 
-    const cx = new Bookit();
+    const cx = new Bookit({ nolint: true });
 
     expect(Object.keys(bookStub.filesystem.testProject.book)).to.deep.equal([
       'oops.md',

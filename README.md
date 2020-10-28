@@ -119,6 +119,24 @@ When you make changes to the plugin, you'll need to repeat the following steps t
 - ~~remove logging on missing uuid in building meta~~
 - add more logging
 - yargs testing?
-- cleanup connector logic
+- cleanup connector logic/testing
+  - improve test fixtures
+    - TEST_FILE_FIXTURE = { srcFile, bookFile.split('\r\n') }
+  - pull out formatting logic to formatter
+  - standardize shared data (class?)
+- make compatible with older node? (delete non-empty dir)
+- add CI/CD
+- formalize/polish doc
+  - plugin readme
+    - what is it?
+    - how to install
+    - how to use; dir structure, links, etc.
+    - how to contrib
+  - init doc
+    - add link in readme to TOC
+    - add link in readme to bookit.md
+      - how to build the book
+      - how to dev book; config directories, etc.
 - add src file linter
-  - replace filename links with uuid links
+  - ~~replace filename links with uuid links~~
+- create bookit handbook

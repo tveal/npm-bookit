@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import * as sinon from 'sinon';
-import { formatLine } from '../../../src/utils';
+import { formatLine, lintFile } from '../../../src/utils';
 
 describe('Line Formatting', () => {
   beforeEach(() => {
@@ -149,5 +149,22 @@ describe('Line Formatting', () => {
       'ext img ln no title ![](https://github.com/something?query=param)',
       'relative img path [here](./8b7b8a0f-a14c-41b8-ac48-45ebe461bd92.md)',
     ].join(' '));
+  });
+  it('lintFile should replace file links with relative path to book uuid file', () => {
+    const content = [
+      'ext img ln no title ![](https://github.com/something?query=param)',
+      'relative book path [here](../chapter01/02-ide.md)',
+      'relative book path2 [here](../introduction/page2.md)',
+    ].join('\r\n');
+
+    const fmt = lintFile(content, {
+      srcFileNameMap, srcFilePath: `${srcPath}/chapter01/01-something.md`, bookPath,
+    });
+
+    expect(fmt.split('\r\n')).to.deep.equal([
+      'ext img ln no title ![](https://github.com/something?query=param)',
+      'relative book path [here](../../book/972a9e51-d22a-484f-a1fa-8ac24288d282.md)',
+      'relative book path2 [here](../../book/c227518b-3fc1-4afe-8c3e-27b6455617b3.md)',
+    ]);
   });
 });
