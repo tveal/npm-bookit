@@ -1,0 +1,47 @@
+ff2e3d95-f162-44e7-af4e-e74d6d530f03
+
+
+## ToDo:
+- ~~turn formatLine into array series of map for adorning things~~
+- ~~img path sub~~
+- ~~clean bookDir before build~~
+- ~~add TOC header~~
+- ~~figure out logging~~
+- ~~cli pattern~~
+- ~~bookit --init flag~~
+  - ~~create src dir~~
+  - ~~create book dir~~
+  - ~~create bookit.yml~~
+  - ~~create/append dev notes to README.md~~
+  - ~~use CLI prompter for book sections to create~~
+  - ~~create home.md~~
+- ~~add line formatter to replace uuid src-to-book links~~
+- ~~fix chapter-section numbering~~
+- ~~add section page nav~~
+- ~~remove logging on missing uuid in building meta~~
+- add more logging
+- yargs testing?
+- cleanup connector logic/testing
+  - improve test fixtures
+    - TEST_FILE_FIXTURE = { srcFile, bookFile.split('\r\n') }
+  - pull out formatting logic to formatter
+  - standardize shared data (class?)
+- make compatible with older node? (delete non-empty dir)
+- add CI/CD
+- formalize/polish doc
+  - plugin readme
+    - what is it?
+    - how to install
+    - how to use; dir structure, links, etc.
+    - how to contrib
+  - init doc
+    - add link in readme to TOC
+    - add link in readme to bookit.md
+      - how to build the book
+      - how to dev book; config directories, etc.
+- add src file linter
+  - ~~replace filename links with uuid links~~
+- create bookit handbook
+- prevent img dir from being inside book dir (otherwise it gets deleted on clean)
+- bugfix
+  - ~~TOC chapter page title on first build, no uuid~~

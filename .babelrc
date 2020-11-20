@@ -1,0 +1,42 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "node": "8.10"
+        },
+        "useBuiltIns": "entry",
+        "corejs": "2.x",
+        "debug": false
+      }
+    ]
+  ],
+  "env": {
+    "test": {
+      "plugins": [
+        [
+          "@babel/transform-runtime",
+          {
+              // "helpers": false,
+              // "polyfill": false,
+              "regenerator": true
+          }
+        ],
+        "istanbul"
+      ]
+    }
+  },
+  "plugins": [
+    [
+      "@babel/plugin-proposal-decorators",
+      {
+        "legacy": true
+      }
+    ],
+    "@babel/plugin-proposal-function-sent",
+    "@babel/plugin-proposal-export-namespace-from",
+    "@babel/plugin-proposal-numeric-separator",
+    "@babel/plugin-proposal-throw-expressions",
+  ]
+}

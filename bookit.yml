@@ -1,0 +1,6 @@
+bookSrc: src/doc
+bookDst: doc
+imgDir: img
+lintSrc: true
+chapterTitles:
+  '1': Let's Get Started!
